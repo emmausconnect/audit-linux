@@ -1,23 +1,46 @@
--------------------- V2.5.0 1 Oct 2025 -------------------------------
+-------------------- V2.6.0      16 Oct 2025 -------------------------------
 
 Fonctions:
-    AuditLinux s'enrichit d'un MENU  [Version BETA]  ( appelable via "bash menu.sh" )
-    - Appel d'outils de tests ( disque, batterie, clavier/son/webcam )
-    - Saisie des Caractéristiques Matériel ( et mémorisation des infos saisies )
-    - Lancement de l'Audit ( mini-audit ou audit+transferts)
-    - Utilitaires BOLC ( changement de statut du PC )
-    - Accès aux sites web des constructeurs
-    - Documentation
-    - Oubli de l'identifiant Emmaus, précdemment saisi
 
-    L'audit continue à être appelable directement
-        # en fournissant l'identifiant Emmaus
-        bash audit.sh  GRPCxx-nnnn
+ Rajout d'un bouton pour lancer les Finitions Automatisées:  (Version BETA)
+  - Tunning Firefox ( paramètres, extension  Ublock-origin )
+  - Rajout d'actions dans le Menu contextuel de l'explorer 
+  - Raccourcis dans la Barre d'accès rapide
+  - Icones (Corbeille,Dossier Personnel) et Raccourcis ( Téléchargements, Documents) sur le Bureau
+  
+  - Possibilité pour un Site de définir des applications à installer ( fichier esn/applis.json )
+  - Possibilité pour un Site de définir ses propres paramétrages Firefox  ( fichier esn/firefox.cfg )
 
-        # sans saisir l'identifiant Emmaus => il sera demandé et mémorisé 
-        bash audit.sh  
+  - Bouton séparé pour la création du fichier MotDePasse.txt sur le Bureau
 
-    Le test de batterie continue à être appelable directement
+ Meilleure détection de certaines CPU ( pour le cpumark )
+
+Remarques:
+ - le bouton "Test Disques" renvoie désormais vers un script addons/testdisque.sh
+   Il se contente d'appeler l'outil standard "Gestion Disques"
+   Celui ci ne détecte malheureusement pas l'état de santé des disques NVME ( mais j'espère que la version LMDE7 saura corriger ce manque incroyable )
+
+
+-------------------- V2.5.0     1 Oct 2025 -------------------------------
+
+Fonctions:
+ AuditLinux s'enrichit d'un MENU  [Version BETA]  ( appelable via "bash menu.sh" )
+  - Appel d'outils de tests ( disque, batterie, clavier/son/webcam )
+  - Saisie des Caractéristiques Matériel ( et mémorisation des infos saisies )
+  - Lancement de l'Audit ( mini-audit ou audit+transferts)
+  - Utilitaires BOLC ( changement de statut du PC )
+  - Accès aux sites web des constructeurs
+  - Documentation
+  - Oubli de l'identifiant Emmaus, précdemment saisi
+
+ L'audit continue à être appelable directement
+   # en fournissant l'identifiant Emmaus
+   bash audit.sh  GRPCxx-nnnn
+
+   # sans saisir l'identifiant Emmaus => il sera demandé et mémorisé 
+   bash audit.sh  
+
+ Le test de batterie continue à être appelable directement
         bash batterie.sh
 
 Remarque:

@@ -25,6 +25,10 @@ import time
 
 # fichiers include
 from  outils import *  
+from cpumark import *
+from categorie import *
+
+
 WIN=ISWIN()
 if WIN:
     from win.windows import *
@@ -110,110 +114,6 @@ def DataGet( dir, file ):
     with open( filename,"r") as f:
         data=f.read()
     return data
-
-#--------------------------------------------------------
-# Nettoie le nom d'une CPU, avant de la rechercher dans la liste
-#
-#  INPUT
-#     cpuname: nom du cpu
-#  RETURN
-#     nom du cpu nettoyé
-#
-#   valeur Inxi                                         Valeur cpubenchhmark.net
-#   Intel (R) Core(TM) i5-6200U CPU @ 2.30GHZ           Intel Core i5-6200U @ 2.30GHZ
-#   Intel Core i7-5600U                                 Intel Core i7-5600U @ 2.60GHz
-#   13th Gen Intel Core i7-1360P                        Intel Core i7-1360P 
-#   Intel Core i7 M 620                                 Intel Core i7-620M
-#
-#   AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G        AMD PRO A10-8730B   (nettoyer à partir de la virgule est utile mais pas suffisant à cause du R5 )
-#--------------------------------------------------------   
-def CleanCpuname(cpuname):
-
-    # à faire avant les autres
-    #cpuname=re.sub( r'[@][{]Name=[^}]*[}]' , "" , cpuname)  # truc tiré de l'auditJJ    supprimer @{Name=.......}
-    cpuname=re.sub( r'[@].*' , "" , cpuname)  # on retire à partir du @
-    cpuname=re.sub( r'[,].*' , "" , cpuname)  # on retire à partir de la virgule   AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G
-
-    # Cas des cpu Intel
-    if cpuname.find("Intel") > -1 :
-        cpuname=re.sub( r'\(R\)' , "" , cpuname)   # supprimer (R)
-        cpuname=re.sub( r'\(TM\)' , "" , cpuname)  # supprimer (TM)
-        cpuname=re.sub( r'CPU ' , "" , cpuname)  # supprimer "CPU "
-        cpuname=re.sub( r'[0-9]+th Gen ' , "" , cpuname , 0 , re.IGNORECASE  )  # supprimer "13th Gen , 13TH GEN"
-
-
-    # Cas des cpu AMD
-    if cpuname.find("AMD") > -1 :
-        cpuname=re.sub( r' with .*$' , "" , cpuname)  # supprimer " with xxxxxxx" 
-        cpuname=re.sub( r' R5$' , "" , cpuname)       # supprimer le R5 final dans AMD PRO A10-8730B R5
-
-    # Pour tout le monde
-    cpuname=re.sub( r'\s+' , " " , cpuname)    # 1 seul espace consecutif
-
-    # Note: cA va faire rater la detection des 2 cas particuliers: Intel Core i5 E 520    Intel Core i5 750S 
-    # une fois qu'on a un seul espace consecutif, transformer Intel(R) Core(TM) i3 CPU       M 330  en  Intel Core i3-330M
-    cpuname=re.sub( r'Intel Core i([0-9]) ([A-Z]) ([0-9]+)' , r"Intel Core i\1-\3\2" , cpuname)  
-    # et aussi Intel Core i3 550  en Intel Core i3-550
-    cpuname=re.sub( r'Intel Core i([0-9]) ([0-9]+)' , r"Intel Core i\1-\2" , cpuname)  
-
-    cpuname=cpuname.strip()
-    return cpuname
-
-
-            
-#--------------------------------------------------------
-# Lit le fichier csv des cpus, et cherche un nom de cpu
-#
-# Les comparaisons se font en minuscules
-# Pour éviter des confusions, on compare sur l'égalité
-# le nom dans Inxi peut être plus grand que le nom dans cpubenchmark.net, mais pas toujours
-#
-#   valeur Inxi                           Valeur cpubenchmark.net
-#   13th Gen Intel Core i7-1360P          Intel Core i7-1360P 
-#   Intel Core i7-5600U                   Intel Core i7-5600U @ 2.60GHz
-#
-# INPUT
-#   cpufile: nom du fichier csv contenant la liste des cpus
-#   cpuname: nom de cpu à rechercher
-# RETURN
-#   l'indice CPU ( CPUMARK) si on trouve la cpu
-#   ""  si pas trouvée
-#--------------------------------------------------------   
-def FindCPUMARK(cpufile,cpuname ):
-
-    # lire le fichier des cpu
-    cpulist=ReadCSV(cpufile,"")
-
-    #cpuname="Intel Core i3-6100U"
-
-
-    cpuold=cpuname
-    cpuname=CleanCpuname(cpuname)
-
-    cpuname=CpuChange().Adapt(cpuname)
-    print(f"Cherche: {cpuold}       Transformé en: {cpuname}")
-
-
-    newcpuname=cpuname.lower()
-
-
-
-
-
-    for cpudata in cpulist:
-        key=cpudata["NAME"]
-        newkey=key.lower()
-        # ANCIEN TEST  qui provoque des confusions    Intel Core i3-6100U est confondu avec Intel Core i3-6100   
-        #   if ( len(newkey) > 10 and newcpuname.find(newkey) > -1) or ( newkey.find(newcpuname) > -1 ):
-        # ce nouveau test limite le risque de confusion, mais ne permet plus de trouver AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G
-        if newcpuname == newkey:
-
-            print(f"Trouve: {key}")
-            value=cpudata["CPUMARK"].replace(",","")  # les valeurs peuvent contenir un separateur de milliers
-            return value
-
-    print(f"Echec de la recherche...")
-    return ""
 
 
 
@@ -311,9 +211,11 @@ def ManualTechInfos(infos,cpumark):
     #!!!! il est important que les clés SSD ou HDD contiennent la taille disque, car c'est ce qui est utilisé dans le calcul des regles
     infos[disktype]=infos["DisqueTaille"]
 
+    infos["CPUMARK"]= cpumark
+
     infos["NoteTechnique"]=int(out["NoteTechnique"])
     infos["NoteEsthetique"]=int(out["NoteEsthetique"])
-    infos["CPUMARK"]= cpumark
+
     infos["Type"]= out["Type"]
     infos["Ecran"]= out["Ecran"]
 
@@ -362,165 +264,8 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
 
 
 
-#--------------------------------------------------
-# Calcule la note de base ( CPU, RAM, DISK ) , en fonction des infos de regles.csv
-#
-# renvoie cette note
-# rajoute les details dans txtnotes
-#
-# INPUT
-#  infos: liste des infos utiles
-#  csvfile: nom du fichier csv des règles
-#  section: nom de la section du csv à utiliser
-#  txtnotes: tableau dans lequel ajouter des lignes d'explication ( UNIQUEMENT avec append() )
-# RETURN
-#  note de base 
-#  txtnotes modifié
-#---------------------------------------------------
-def ComputeNote( infos , csvfile ,section ,txtnotes):
 
 
-    rules=ReadCSV( csvfile,section)
-    finalnote=0
-
-    # parcourir toutes les regles
-    for rule in rules:
-
-        # sur quel critere la regle s'applique
-        key=rule[section]
-        if key == "" : continue  # ligne vide ou non applicable
-
-        # si le critere existe dans les infos
-        if key in infos:
-            keyvalue=int( infos[key] )
-            keynote=0
-
-            # parcourir les valeurs de la regle, si la valeur reelle est inferieure à la valeur de la règle, on retourne la note associée
-            for note,limit in rule.items():
-                if limit == "": limit="999999999"   # Cas de la note maximale. Pour elle, on met une valeur limite infinie
-                if not limit.isnumeric(): continue  # Eliminer ce qui n'est pas une valeur numerique
-
-                vlimit=float(limit)*0.94  # 6% de marge: une memoire de 16GB apparait comme 15.30GB
-                if keyvalue < vlimit:
-                    txt=f"{key}={keyvalue} Note={note}" 
-                    txtnotes.append(txt)
-                    finalnote=finalnote+ float(note)
-                    break;
-
-    return int(finalnote)            
-
-#--------------------------------------------------
-# Modifie la note de base , en fonction de regles
-#
-# renvoie la note finale
-# rajoute le detail des claculs dans txtnotes
-#
-# INPUT
-#  infos: liste des infos utiles
-#  csvfile: nom du fichier csv des règles
-#  section: nom de la section du csv à utiliser
-#  initialnote: note initiale à modifier
-#  txtnotes: tableau dans lequel ajouter des lignes d'explication ( UNIQUEMENT avec append() )
-# RETURN
-#  note modifiée
-#  txtnotes modifié
-#---------------------------------------------------
-def ComputeNoteModif( infos , csvfile ,section ,txtnotes,initialnote):
-
-    maxcrit=5
-    rules=ReadCSV( csvfile,section)
-
-    note=initialnote
-
-
-    txtnotes.append("")
-    txtnotes.append(f"Note brute avant ajustements={initialnote} ")
-    txtnotes.append(f"Delta NoteTechnique={infos['NoteTechnique']}")
-    txtnotes.append(f"Delta NoteEsthetique={infos['NoteEsthetique']}")
-
-    note=note + int(infos["NoteTechnique"]) + int(infos["NoteEsthetique"])
-    txtnotes.append("")
-
-    # parcourir toutes les regles
-    for rule in rules:
-        if rule[section]=="" : continue    # regle non activée si la 1e colonne est vide
-        #print("\n",rule["DESCRIPTION"])
-        allpresent=True
-        critlist={}
-
-        # fabriquer la liste des criteres non vides pour cette règle
-        for i in range( 0, maxcrit ):
-            keycrit=f"CRIT{i}"
-            keyval=f"VAL{i}"
-            if keycrit in rule : 
-                critname= rule[keycrit] 
-                critvalue= rule[keyval] 
-                if critname != "":
-                    critlist[ critname  ] = critvalue
-
-        # vérifer chaque critère
-        explain=[]
-        ok=True
-        for critname,critvalue in critlist.items():
-            # tous les criteres doivent être presents dans infos
-            if critname not in infos: 
-                ok=False
-            else:
-                infosvalue=infos[critname] 
-                # si critvalue est vide, on vérifier seulement que le critname existe dans infos
-                # si non, on verifie que la valeur reelle dans infos est inferieure à critvalue
-                if critvalue == "" :
-                    explain.append(f"{critname}")
-                else:
-                    if float( infosvalue ) >= float( critvalue) : ok=False
-                    explain.append(f"{critname}={infosvalue}")
-
-
-
-        # si ok est True, on applique la règle
-        if ok:
-            memnote=note
-            desc=rule["DESCRIPTION"]
-
-            action=rule["DELTA"]
-            if  action != "" and action.isnumeric() :
-                note=note + int( action )
-
-            action=rule["MAX"]
-            if action  != ""  and action.isnumeric() :
-                note= min( note ,int( action )  )
-
-            txtnotes.append( f"\nREGLE: {desc}" )
-            txt=" ".join(explain)
-            txtnotes.append(f"VALEURS: [{txt}]" )
-            txtnotes.append(f"Note Initiale={memnote}   Note Modifiee={note}")
-
-    return note
-
-#--------------------------------------------------
-# Calcule la categorie 
-#
-#
-# INPUT
-#  csvfile: nom du fichier csv des règles
-#  note:    note à convertir en catégorie
-# RETURN
-#  categorie
-#---------------------------------------------------
-def ComputeCategorie( csvfile , note):
-    if note < 0: note=0
-
-    section="#CATEGORIE"
-    table=ReadCSV( csvfile,section  )
-
-    cat=""
-    for item in table:
-        cat=item[section]
-        if str(note) == item["NOTE"]:
-            return cat
-
-    # pas trouve ! on prend le dernier de la liste
-    return cat
          
 #--------------------------------------------------
 # Genere les fichiers ( bolc.csv , audit.txt )
@@ -1080,14 +825,8 @@ def ProcessAudit(mini=False,xfer=False):
 
     Admin.ECID = Ecid().Get()
 
-
-
-
-
     # Audit du système et extraction des données
     infos=AuditMe()
-
-
 
     # Si le materiel est declaré comme tablette, on force le type
     if len(Admin.ECID) > 4 and Admin.ECID[2:4] == "TA":
@@ -1100,7 +839,8 @@ def ProcessAudit(mini=False,xfer=False):
     #infos["Processeur"]= "13th Gen Intel (R) Core i5-3439Y @ 1.50GHz"  #### TEST
     #infos["Processeur"]="Intel Core i5 M 520"  ##### test
     print(f"\n----------------- Recherche du processeur dans {CSVCPU} ----------------------")
-    cpumark=FindCPUMARK(CSVCPU,infos["Processeur"] )
+    (cpumark,cpufound,trace) = FindCPUMARK(CSVCPU,infos["Processeur"] )
+    print(trace)
 
     # Saisie d'infos complémentaires, y compris le cpumark si pas trouvé
     print("\n------------ Saisie manuelle d'informations --------------------")
@@ -1196,6 +936,7 @@ except:
 # Se positionne sur le drive/directory du script principal
 ChdirScript()
 
+
 # charger la maj
 UpdateMe()
 
@@ -1224,7 +965,7 @@ if __name__ == '__main__':
     
     # Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
     if nopc:
-        Zinputbox("**FIN**" , "Fin de l'audit !                              ")
+        Zinputbox("**FIN**" , "                                Fin de l'audit !                              ")
 
 
 

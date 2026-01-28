@@ -1,0 +1,8 @@
+// Ne pas supprimer cette ligne !
+
+// afficher une page vide
+defaultPref("browser.startup.homepage", "chrome://browser/content/blanktab.html");
+defaultPref("browser.newtabpage.enabled", false);
+defaultPref("browser.newtab.url", "about:blank");
+
+

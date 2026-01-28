@@ -9,7 +9,11 @@
 #
 #
 ##################################################################################
-from outils import *
+
+import os
+import sys
+
+from common import *
 
 TMPDISK="/tmp/"                                 # répertoire où sont générés les fichiers temporaires.  DOIT être terminé par /
 TMPSCANFILE=TMPDISK+ "scan-linux.txt"           # fichier d'export de la commande inxi

@@ -21,6 +21,7 @@ fi
 
 cd $dir
 
+echo "😀️ Bienvenue dans Audit-Linux (menu principal) 😀️"
 read -p "❗️Entrer le mot de passe: " ZZZEMMAUS
 export ZZZEMMAUS
 echo ""

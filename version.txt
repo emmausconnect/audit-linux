@@ -1,4 +1,4 @@
-VERSION=2.5.0
+VERSION=2.6.0
 #------------- files ----------------------
 audit.py
 audit.sh
@@ -9,6 +9,9 @@ batterie.sh
 cpus.csv
 cpuchange.csv
 outils.py
+common.py
+cpumark.py
+categorie.py
 ux
 ihm.py
 ihmlinux.py
@@ -17,9 +20,13 @@ README.txt
 regles.csv
 version.txt
 changelog.txt
+finitions.py
 DecouverteMonPC-Linux
 doc
 modeles
+addons
+esn
+
 
 
 

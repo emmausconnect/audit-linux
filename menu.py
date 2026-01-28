@@ -16,11 +16,13 @@ import os
 from  outils import *   
 from ihm  import *
 from audit import *
+from finitions import *
+
 
 
 
 #--------------------------------------------------------
-# Menu principal
+# Menu principal Windows
 #
 #--------------------------------------------------------
 def MenuWinActions(owner,id):
@@ -65,8 +67,7 @@ def MenuWinActions(owner,id):
 
 
 
-def PrepareSudo():
-    os.system( ' echo "$ZZZEMMAUS" | sudo -S -p "init sudo" echo "..............." ')
+
 
 #--------------------------------------------------------
 # Menu reconditionnement
@@ -98,7 +99,7 @@ def MenuRecondActions(owner,id):
 
 
     if id == "DISK":
-        cmd= "gnome-disks &"  # en background pour pas bloquer le menu
+        cmd= "bash addons/testdisque.sh &"
         os.system(cmd) 
 
 
@@ -127,11 +128,15 @@ def MenuRecondActions(owner,id):
         c = Caract()
         c.Dialog()
 
+    if id == "MAJ":
+        MajAll()
+
+    if id == "PWD":
+        MajPwd()
+
+
     if id == "BOLC":
         TransfertBolc()
-
-
-
 
     if id == "STATUT":
         BolcStatut()
@@ -179,6 +184,9 @@ def MenuRecond( withtest=True ):
         boxaudit=Zvbox( vbox2,5,5)
         Zbutton(dialog, boxaudit ,"AUDITXFER", "AUDIT + transferts","lightblue")
         Zbutton(dialog, boxaudit ,"AUDIT", "AUDIT sans transferts","lightblue")
+
+        Zbutton(dialog, boxaudit ,"MAJ", "Finitions (Bureau,Menu,Barre des Tâches,Firefox,Applis)","salmon")
+        Zbutton(dialog, boxaudit ,"PWD", "Création MotDePasse.txt","salmon")
         #Zcheck(dialog,boxaudit,"XFEREMMAUS","Transfert vers serveur Emmaus","on")
         #Zcheck(dialog,boxaudit,"XFERBOLC","Transfert vers BOLC","on")
         #######################################Zbutton(dialog, vbox2 ,"TUNING", "Installations/Finitions (EmCoTech)","pink")  
