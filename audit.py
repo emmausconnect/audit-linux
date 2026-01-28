@@ -59,7 +59,7 @@ DEBUG=False
 if "debug" in sys.argv : DEBUG=True
 
 # Noms de fichiers
-ZIPFILE=TMPDISK+ "audit-zip.zip"              # zip des fichiers à envoyer vers audits.emmaus-connect.org
+ZIPFILE=os.path.join(TMPDISK, "audit-zip.zip"   )           # zip des fichiers à envoyer vers audits.emmaus-connect.org
 
 FILEBOLC="bolc.csv"                 # fichier .csv pour import manuel dans le Bolc
 FILERAPPORT="audit.txt"             # fichier d'audit déposé sur le Bureau
@@ -306,7 +306,7 @@ def MakeSendFiles(xfer=True):
     DataSave( TMPDISK , "-bolc.txt",filebolcimport)
 
     MakeBolc( filebolc )
-    MakeRapport( filerapport )
+    MakeRapport( filerapport , header=True , details=False  )
     MakeFiches( filefiche , filedouchette )
     MakeFicheAchat(fileachat)
     Caract().Html(filecaract)
@@ -322,9 +322,8 @@ def MakeSendFiles(xfer=True):
         print( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
 
     # Rajout du détail des notes sur le rapport, avant de l'envoyer 
-    with open( filerapport, "a" ) as f:
-        f.write("\n\n-------------- Explications de la notation ----------------\n\n" )
-        f.write( "\n".join(Admin.txtnotes) )
+    MakeRapport( filerapport , header=True , details=True  )
+
  
 
 
@@ -368,8 +367,9 @@ def MakeSendFiles(xfer=True):
     if exitcode in [ "EMMAUS", "BOTH" ] :
         print(f"\n-------------- envoi des fichiers vers audits.emmaus-connect.org  --------------")
         #cmd=f"curl -X POST https://update.drop.tf/upload_zip.php -F \"ecid={Admin.ECID}\" -F \"actual_file=@{ZIPFILE}\"  "
-        cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={Admin.ECID}" -F "actual_file=@{ZIPFILE}"  '
-        os.system(cmd)
+        TransfertEmmaus( ZIPFILE , Admin.ECID )
+
+
         print()
 
     if exitcode in [ "BOTH" ] :
@@ -379,32 +379,10 @@ def MakeSendFiles(xfer=True):
         # - sinon l'import échouera si le N° de don est vide
         # Le nom de fichier doit être comme   GR-PORTABLE-date.csv , sinon l'import bolc l'ignore 
         print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
-        code=TransfertBolc(filebolcimport)
+        TransfertBolc(filebolcimport,DEBUG)
         print()
 
-#--------------------------------------------------
-# Envoie le fichier vers le Bolc
-#
-# INPUT
-#  filebolcimport:  nom  du fichier . S'il est vide, on le retrouve avec DataGet()
-# RETURN
-#  code  ( 0 si OK)
-#--------------------------------------------------
-def TransfertBolc(filebolcimport=""):
-    if filebolcimport == "":
-        filebolcimport=DataGet(TMPDISK,"-bolc.txt")
-    if filebolcimport == "" or not os.path.isfile(filebolcimport):
-        print(f"******** Fichier BOLC non trouvé : {filebolcimport} **************")
-        return
-        
-    # envoi par sftp , en utilisant la commande curl
-    fileconf="sftp.conf"
-    cmd= f"{CURL} -k {P}fast{S} -T {filebolcimport} sftp://sftpemmaus.newmips.cloud:22222"
-    if DEBUG :
-        print(cmd)
-        print()
-    code=os.system(cmd)
-    if ( code == 0 ) : print("******** Transfert BOLC OK **************")
+
 
     
 
@@ -413,16 +391,17 @@ def TransfertBolc(filebolcimport=""):
 #
 # INPUT
 #  filename:  nom complet du fichier
-#  full:      si False, on fait un affichage minimal
+#  header:      si True, on affiche le header
+#  details:   si True, on affiche le details du calcul des notes
 #--------------------------------------------------
-def MakeRapport(filename,full=True):
+def MakeRapport(filename,header,details):
 
-    if full: icon=""
+    if header: icon=""
     else   : icon="➡️ "
 
     CRLF="\r\n"
 
-    if full : print("**Creation: " , filename)
+    if header : print("**Creation: " , filename)
 
     items=[
     f"======================= Rapport d'Audit  (Version={VERSION}) ================",   
@@ -457,10 +436,15 @@ def MakeRapport(filename,full=True):
 
     txt3=CRLF.join(items) + CRLF
 
-    with open( filename,"w") as f:
-        if full: f.write(txt1)
+    txt4= "\n\n✅-------------- Explications de la notation ----------------\n\n"
+    txt4 = txt4 + "\n".join(Admin.txtnotes) 
+
+
+    with open( filename,"w",encoding="utf-8") as f:
+        if header: f.write(txt1)
         f.write(txt2)
         f.write(txt3)
+        if details: f.write(txt4)
 
 #--------------------------------------------------
 # Genere la ficher achat
@@ -615,6 +599,76 @@ def MakeBolc(filename):
         f.write(txt + "\r\n")
                          
 #===========================================================================================
+# Changement du statut Bolc
+#
+#  On prend le modele
+#===========================================================================================
+def BolcStatut(debug=False):    
+
+    ecid=Ecid().Get()
+    liststatut=[
+            "A reconditionner",
+			"En reconditionnement",
+			"A entrer dans Salesforce",
+			"Prêt à vendre ",
+			"Prêt à donner",
+			"Réservé",
+			"Vendu",
+			"Donné ",
+			"Usage interne",
+			"SAV bénéficiaire",
+			"HS",
+			"perdu",
+			"Transféré",
+			"En attente ",
+			"Retour reconditionneur pro.",
+            "Utilisé"
+            ]
+    
+    dialog=Zdialog("Changement du Status Bolc",5,5)
+    vbox=dialog.area
+    Ztext( vbox , f"Identifiant: {ecid}")
+    # Important de mettre une valeur initiale
+    Zlistbox(dialog,  vbox, "STATUT", "Nouveau Statut", liststatut , "") 
+    Zentry(dialog, vbox, "COMMENT", "Commentaire Statut: ","r","")
+        
+    boxactions= Zhbox(vbox,0,0)
+    Zbutton(dialog, boxactions ,"QUIT", "QUITTER","Orange")
+    Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
+
+    out=dialog.Run()
+    #print(out)
+    if out.get("OK","") == "" : return
+    if out.get("STATUT","") == "" : return
+
+    print("Nouveau statut: " + out["STATUT"])
+
+    date= datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    site=ecid[0:2]
+    filebolc  = os.path.join( TMPDISK , f"{site}-PORTABLE-{date}.csv" )
+
+    with open( os.path.join( "modeles", "bolc.csv")  , "r" ) as f:
+        data=f.read()
+    keys=data.split(";")
+
+
+    gooditems={ "id_pc" : ecid , "id_statutp" : out["STATUT"], "id_statutc" : out["COMMENT"] }
+    bolcdata=[]
+    for key in keys:
+        value=gooditems.get( key , "" )
+        value=value.replace(";",",")
+        bolcdata.append(value)
+
+    bolcdata=";".join( bolcdata)
+    
+    with open(  filebolc , "w" ) as f:
+        f.write( bolcdata )
+
+
+    TransfertBolc( filebolc , debug)
+
+
+#===========================================================================================
 # Collecte des Tests Materiel
 #
 #  les infos sont mémorisées dans un fichier -caract.txt au format json
@@ -767,6 +821,7 @@ class Ecid():
         self.Save(value)
         return value
 
+
 #------------------------------------------------------------------
 # Download  un .zip si la version dans version.txt est inferieure à celle sur le serveur
 #
@@ -889,10 +944,9 @@ def ProcessAudit(mini=False,xfer=False):
     print(f"Categorie={Admin.categorie}")
 
     #------------------- affichage rapide ------------------------
-    filename=TMPDISK + "infos.txt"
-    MakeRapport(filename, False)
-    cmd=f"xed --new-window {filename} &"   #background pour pas bloquer le menu
-    os.system(cmd)
+    filename=os.path.join( TMPDISK , "infos.txt")
+    MakeRapport(filename, header=False, details=True )
+    Editor( filename )
 
     # si Mini Audit , pas d'envoi ....
     if mini : return
@@ -918,6 +972,19 @@ def ProcessAudit(mini=False,xfer=False):
 
     MakeSendFiles(xfer)
 
+#--------------------------------------------------------------------
+# Demande de passwd sur Linux
+#--------------------------------------------------------------------
+def GetPasswd():
+    if WIN : return
+
+    if "ZZZEMMAUS" in os.environ: return
+
+    pwd=Zinputbox( "Saisie Mot de Passe","","           Entrer le mot de passe              ","")
+    if pwd != "":
+        os.environ[ "ZZZEMMAUS" ] = pwd
+
+
 #=============================== Main ==============================
 
 # Catcher le CTRL/C
@@ -938,7 +1005,7 @@ ChdirScript()
 
 
 # charger la maj
-UpdateMe()
+if not WIN : UpdateMe()
 
 # Test interne désactivé
 cpulist=[ "Intel (R) Core(TM)      i5-6200U CPU @ 2.30GHZ  @{Name=bidule}" ,   " AMD 3456 @  2.30GHZ      with double option" ]

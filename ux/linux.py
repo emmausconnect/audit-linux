@@ -15,18 +15,15 @@ import sys
 
 from common import *
 
-TMPDISK="/tmp/"                                 # répertoire où sont générés les fichiers temporaires.  DOIT être terminé par /
-TMPSCANFILE=TMPDISK+ "scan-linux.txt"           # fichier d'export de la commande inxi
+TMPDISK="/tmp"                                  # répertoire où sont générés les fichiers temporaires.  
+
 FILESCAN="scan-linux.txt"                        # fichier contenant le scan système qu'on copie sur drop.tf
 OSTARGET="Linux"                                # Utilisé pour trouver kes règles dans regles.csv , et comme suffixe pour DecouverteMonPC
-     
-# directory separateur
-DIRSEP="/"
+   
+TMPSCANFILE=os.path.join( TMPDISK ,  "scan-linux.txt")           # fichier d'export de la commande inxi
+  
 
-# Curl prefix/suffix
-P="$"
-S=""
-CURL="curl"
+
        
 # Variables globales
 inxidata={}  

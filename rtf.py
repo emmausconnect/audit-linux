@@ -2,6 +2,7 @@
 # Generation de qrcode
 #
 #####################################################################
+import os
 
 # On se protege contre le cas où le module qrcode n'est pas installé
 try:
@@ -90,7 +91,7 @@ def MakeRTF( items, txtqrcode ,filertf , tmpdir ):
         itemdata=itemdata+ f"\\par\\fs{size} {label}" + RtfEncode(value) + "\n"
  
     # fabrication du contenu @PNGDATA@
-    pngdata= MakeQR( txtqrcode , tmpdir + "qrcode.png")
+    pngdata= MakeQR( txtqrcode , os.path.join(tmpdir , "qrcode.png") )
 
     # insertion
     rtftxt=template

@@ -6,12 +6,12 @@ if "HOME" in os.environ :
 else:
     from ihmwin import *
 
-#===========================================================================
+#--------------------------------------------------------------------
 # InputBox avec un message et une zone de saisie
 #
 # Renvoie la saisie si on clique sur OK
 # Si on ferme la fenêtre avec la croix,on aura ""
-#===========================================================================
+#--------------------------------------------------------------------
 def Zinputbox(title,msg,entrylabel="",initvalue=""):
     # créer l'objet Zdialog
     dlg=Zdialog(title)
@@ -33,6 +33,7 @@ def Zinputbox(title,msg,entrylabel="",initvalue=""):
         return result.get( "ZVALUE", "") # au cas ou pas de entrylabel]
     else:
         return ""
+
 
 #========================= TEST ZONE =================
 

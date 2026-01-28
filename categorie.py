@@ -64,7 +64,8 @@ def ComputeNote( infos , csvregles ,section ,txtnotes):
 
         # si le critere existe dans les infos
         if key in infos:
-            keyvalue=int( infos[key] )
+            keyvalue=float( infos[key] )
+            keyvalue=round(keyvalue)     # arrondi : une mémoire de 3.99 GO sera vue comme 4 . Il y a des petits risque d'écart suite à la conversion GiB / GB
             keynote=0
 
             # parcourir les valeurs de la regle, si la valeur reelle est inferieure à la valeur de la règle, on retourne la note associée
@@ -72,7 +73,10 @@ def ComputeNote( infos , csvregles ,section ,txtnotes):
                 if limit == "": limit="999999999"   # Cas de la note maximale. Pour elle, on met une valeur limite infinie
                 if not limit.isnumeric(): continue  # Eliminer ce qui n'est pas une valeur numerique
 
-                vlimit=float(limit)*0.94  # 6% de marge: une memoire de 16GB apparait comme 15.30GB
+                # marge:  
+                marge= 0.94  # 6% de marge  ... permet à un disque de 250GO d'être traité comme un disque 256GO
+                marge=1.0    # abandon de la marge : pour éviter des écarts avec les moulinettes Excel qui peuvent exister dans les sites
+                vlimit=float(limit)* marge  
                 if keyvalue < vlimit:
                     txt=f"{key}={keyvalue} Note={note}" 
                     txtnotes.append(txt)

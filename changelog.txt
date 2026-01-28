@@ -1,3 +1,26 @@
+-------------------- V2.7.1      6 Nov 2025 -------------------------------
+
+Fonctions:
+  - Les scripts menu.sh et audit.sh sont marqués "exécutable" : on peut les lancer en double cliquant dessus
+
+  - Rajout de 2 menus  pour forcer le clavier Français ou Français/mac ( setxkbmap-fr , setxkbmap-fr-mac )
+    ( utile quand on veut lancer l'Audit directement après avoir booté sur la clé LMDE : la clavier est alors par défaut en Anglais)
+    Ca correspond à des scripts exécutables, donc on peut simplement les lancer par double clik
+
+  - Tuning Firefox: inactivation de l'IA qui consomme énormément de ressources ( repris de EmCoTech )
+
+  - Catégorisation: suppression de la marge de tolérance lors de la comparaison avec les seuils
+    ( Pour éviter des écarts avec les moulinettes Excel qui peuvent exister dans les sites )
+
+  - La saisie du passwd ne se fait plus au lancement,mais quand on en a besoin
+
+Documentation:
+    - README.txt a été révisé, avec le rajout de plein d'astuces
+
+
+-------------------- V2.7.0      Oct 2025 -------------------------------
+Petite réorganisation
+
 -------------------- V2.6.0      16 Oct 2025 -------------------------------
 
 Fonctions:

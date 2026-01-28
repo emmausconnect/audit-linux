@@ -91,7 +91,7 @@ def MenuRecondActions(owner,id):
    
 
     if id == "DOC":
-        filehtm=os.path.join("doc","index.html")
+        filehtm=os.path.join("doc","index.htm")
         Browser( filehtm )
 
     if id == "INITID":
@@ -104,6 +104,7 @@ def MenuRecondActions(owner,id):
 
 
     if id == "BATTERIE":
+        GetPasswd()
         # cette commande est non-bloquante
         cmd='gnome-terminal --title "TEST BATTERIE" -- bash batterie.sh'
         os.system(cmd)
@@ -113,14 +114,17 @@ def MenuRecondActions(owner,id):
 
 
     if id == "AUDITMINI":
+        GetPasswd()
         PrepareSudo()
         ProcessAudit(mini=True)
 
     if id == "AUDITXFER":
+        GetPasswd()
         PrepareSudo()
         ProcessAudit(mini=False,xfer=True )
 
-    if id == "AUDIT":  
+    if id == "AUDIT": 
+        GetPasswd() 
         PrepareSudo()      
         ProcessAudit(mini=False,xfer=False)
 
@@ -132,17 +136,24 @@ def MenuRecondActions(owner,id):
         MajAll()
 
     if id == "PWD":
+        GetPasswd()
         MajPwd()
 
 
     if id == "BOLC":
-        TransfertBolc()
+        filebolc=os.path.join( TMPDISK,"-bolc.txt")
+        TransfertBolc(filebolc)
 
     if id == "STATUT":
-        BolcStatut()
+        BolcStatut(DEBUG)
 
+    if id == "KEYBDFR":
+        cmd= "bash setxkbmap-fr"
+        os.system(cmd) 
 
-
+    if id == "KEYBDMAC":
+        cmd= "bash setxkbmap-fr-mac"
+        os.system(cmd) 
 
 
 
@@ -168,12 +179,17 @@ def MenuRecond( withtest=True ):
 
 
         butils=Zvbox(vbox1,5,5,"Utilitaires")
-        Zbutton(dialog, butils ,"BOLC", "Transfert BOLC","Yellow")
+
+        bclavier=Zhbox(butils,0,0)
+        Zbutton(dialog, bclavier ,"KEYBDFR", "setxkbmap fr","Yellow")    
+        Zbutton(dialog, bclavier ,"KEYBDMAC", "setxkbmap fr mac","Yellow")  
+   
+        #Zbutton(dialog, butils ,"BOLC", "Transfert BOLC","Yellow")
         Zbutton(dialog, butils ,"STATUT", "Changement Statut BOLC","Yellow")
         Zbutton(dialog, butils ,"INITID", "REINITIALISATION IDENTIFIANT EMMAUS","Yellow")
 
         bres=Zvbox(vbox1,5,5,"Ressources")
-        Zbutton(dialog, bres ,"SITESWEB", "ACCES AUX SITES WEB CONSTRUCTEURS POUR BIOS & DRIVERS","Chocolate",MenuRecondActions)
+        Zbutton(dialog, bres ,"SITESWEB", "SITES WEB CONSTRUCTEURS (BIOS & DRIVERS)","Chocolate",MenuRecondActions)
         Zbutton(dialog, bres ,"DOC", "DOCUMENTATION","Chocolate",MenuRecondActions)
 
 
@@ -182,8 +198,8 @@ def MenuRecond( withtest=True ):
         Zbutton(dialog, vbox2 ,"CHECK", "Affichage Checklist\n** à rajouter **","LightGreen")
         Zbutton(dialog, vbox2 ,"CARACT", "Saisie des Caractéristiques Matériel","LightGreen")
         boxaudit=Zvbox( vbox2,5,5)
-        Zbutton(dialog, boxaudit ,"AUDITXFER", "AUDIT + transferts","lightblue")
-        Zbutton(dialog, boxaudit ,"AUDIT", "AUDIT sans transferts","lightblue")
+        Zbutton(dialog, boxaudit ,"AUDITXFER", "AUDIT + transferts auto","lightblue")
+        Zbutton(dialog, boxaudit ,"AUDIT", "AUDIT sans transferts auto","lightblue")
 
         Zbutton(dialog, boxaudit ,"MAJ", "Finitions (Bureau,Menu,Barre des Tâches,Firefox,Applis)","salmon")
         Zbutton(dialog, boxaudit ,"PWD", "Création MotDePasse.txt","salmon")
@@ -206,73 +222,6 @@ def MenuRecond( withtest=True ):
 
 
 
-#===========================================================================================
-# Changement du statut Bolc
-#
-#  On prend le modele
-#===========================================================================================
-def BolcStatut():    
-
-    ecid=Ecid().Get()
-    liststatut=[
-            "A reconditionner",
-			"En reconditionnement",
-			"A entrer dans Salesforce",
-			"Prêt à vendre ",
-			"Prêt à donner",
-			"Réservé",
-			"Vendu",
-			"Donné ",
-			"Usage interne",
-			"SAV bénéficiaire",
-			"HS",
-			"perdu",
-			"Transféré",
-			"En attente ",
-			"Retour reconditionneur pro.",
-            "Utilisé"
-            ]
-    
-    dialog=Zdialog("Changement du Status Bolc",5,5)
-    vbox=dialog.area
-    Ztext( vbox , f"Identifiant: {ecid}")
-    Zlistbox(dialog,  vbox, "STATUT", "Nouveau Statut", liststatut , "") 
-    Zentry(dialog, vbox, "COMMENT", "Commentaire Statut: ","r","")
-        
-    boxactions= Zhbox(vbox,0,0)
-    Zbutton(dialog, boxactions ,"QUIT", "QUITTER","Orange")
-    Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
-
-    out=dialog.Run()
-
-    if out.get("OK","") == "" : return
-    if out.get("STATUT","") == "" : return
-
-    print("Nouveau statut: " + out["STATUT"])
-
-    date= datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    site=ecid[0:2]
-    filebolc  = os.path.join( TMPDISK , f"{site}-PORTABLE-{date}.csv" )
-
-    with open( os.path.join( "modeles", "bolc.csv")  , "r" ) as f:
-        data=f.read()
-    keys=data.split(";")
-
-
-    gooditems={ "id_pc" : ecid , "id_statutp" : out["STATUT"], "id_statutc" : out["COMMENT"] }
-    bolcdata=[]
-    for key in keys:
-        value=gooditems.get( key , "" )
-        value=value.replace(";",",")
-        bolcdata.append(value)
-
-    bolcdata=";".join( bolcdata)
-    
-    with open(  filebolc , "w" ) as f:
-        f.write( bolcdata )
-
-
-    TransfertBolc( filebolc )
 
 
 

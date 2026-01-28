@@ -1,0 +1,7 @@
+# mettre TEMPORAIREMENT le clavier Français , variante mac
+setxkbmap fr mac
+
+echo "Le clavier a été mis temporairement en clavier Français / variante mac"
+read -p "❗️Taper RETURN pour continuer" ZZZ
+
+

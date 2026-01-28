@@ -47,6 +47,19 @@ def ISWIN():
 
 WIN=ISWIN()
 
+if WIN :
+    TMPDISK=os.environ["TEMP"]                              # répertoire où sont générés les fichiers temporaires
+    # Curl prefix/suffix
+    P="%"
+    S="%"
+    CURL="curlse\\curl.exe"
+else:
+    TMPDISK="/tmp"                                  # répertoire où sont générés les fichiers temporaires.  
+    # Curl prefix/suffix
+    P="$"
+    S=""
+    CURL="curl"
+
 #----------------------------------------------------------
 # alimenter sudo avec som pwd
 #----------------------------------------------------------
@@ -62,25 +75,23 @@ def ChdirScript():
     if mydir == "" : mydir= "."  # necessaire si script sans nom de repertoire
     os.chdir(mydir)
 
-#----------------------------------------------------------
-# Lancer un exe ou le browser
-#----------------------------------------------------------
-def WinExecWait(file):
-    zedir = os.path.dirname(file)
-    if not os.path.isdir(zedir):
-        Zinputbox( "ERREUR", f"REPERTOIRE INTROUVABLE:  {zedir}\nAuriez vous oublié de recopier le répertoire outils ? ", ""  )    
-        return
 
-    # rajouter ""  est obligatoire pour mettre le nom de fichier entre quotes !
-    cmd=f'start /WAIT "" "{file}"'   
-    print(cmd)
-    os.system( cmd )
 
+#----------------------------------------------------------
+# Lancer le browser
+#----------------------------------------------------------
 def Browser(file):
         if WIN:
             cmd=f"start {file}"
         else:
             cmd=f"firefox {file} &"    
+        os.system(cmd)  
+
+def Editor(file):
+        if WIN:
+            cmd=f"start notepad {file}"
+        else:
+            cmd=f"xed  --new-window {file} &"    # background pour pas bloquer le menu
         os.system(cmd)  
 
 #----------------------------------------------------------
@@ -272,9 +283,40 @@ def ReadUrl(url,tmpfile="ztmp.txt"):
 #    except:
 #        txt=""
 
+#--------------------------------------------------
+# Envoie le fichier vers le Bolc
+#
+# INPUT
+#  filebolcimport:  nom  du fichier . S'il est vide, on le retrouve avec DataGet()
+# RETURN
+#  code  ( 0 si OK)
+#--------------------------------------------------
+def TransfertBolc(filebolcimport="",debug=False):
+    if filebolcimport == "" or not os.path.isfile(filebolcimport):
+        print(f"******** Fichier BOLC non trouvé : {filebolcimport} **************")
+        return 
+        
+    # envoi par sftp , en utilisant la commande curl
+    fileconf="sftp.conf"
+    cmd= f"{CURL} -k {P}fast{S} -T {filebolcimport} sftp://sftpemmaus.newmips.cloud:22222"
+    if debug :
+        print(cmd)
+        print()
+    code=os.system(cmd)
+    if ( code == 0 ) : print("******** Transfert BOLC OK **************")
 
-
-
+#--------------------------------------------------
+# Envoie le fichier vers le Bolc
+#
+# INPUT
+#  zipfile:  fichier zip à envoyer
+#  ecid:     identifiant Emmaus
+# RETURN
+#  
+#--------------------------------------------------
+def TransfertEmmaus(zipfile,ecid):
+        cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={ecid}" -F "actual_file=@{zipfile}"  '
+        os.system(cmd)
 
            
 

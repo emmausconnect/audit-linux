@@ -22,11 +22,11 @@ fi
 cd $dir
 
 echo "😀️ Bienvenue dans Audit-Linux (menu principal) 😀️"
-read -p "❗️Entrer le mot de passe: " ZZZEMMAUS
-export ZZZEMMAUS
-echo ""
 
-sudo -K
+#read -p "❗️Entrer le mot de passe: " ZZZEMMAUS
+#export ZZZEMMAUS
+#echo ""
+#sudo -K
 
 python3 -B menu.py $1 $2 $3
 

@@ -1,20 +1,20 @@
 #NOTE-LINUX;0;1;2;3;4;;
 RAM;4;5;8;16;;;
 SSD;64;128;200;500;;;
-HDD;160;257;;;;;
+HDD;160;256;;;;;
 CPUMARK;2000;3500;5000;7000;;;
 ;;;;;;;
 #MODIF;DELTA;MAX;CRIT1;VAL1;CRIT2;VAL2;DESCRIPTION
 x;1;;NVME;;;;disque NVME =>  +1
-x;;5;HDD;;CPUMARK;2500;disque HDD et CPU < 2500 => max categorie=C
-x;;7;SSD;;CPUMARK;2500;disque SSD et CPU < 2500 => max categorie=B
+x;;5;HDD;;CPUMARK;3500;disque HDD et CPU < 3500 => max categorie=C
+x;;7;SSD;;CPUMARK;3500;disque SSD et CPU < 3500 => max categorie=B
 x;;7;HDD;;;;disque HDD => max categorie=B
 x;;7;WIN10;;;;Si Windows10 => max categorie=B
 ;;;;;;;
 #NOTE-WIN;0;1;2;3;4;;
 RAM;4;5;8;16;;;
 SSD;64;128;200;500;;;
-HDD;160;257;;;;;
+HDD;160;256;;;;;
 CPUMARK;2000;3500;5000;7000;;;
 ;;;;;;;
 ;;;;;;;

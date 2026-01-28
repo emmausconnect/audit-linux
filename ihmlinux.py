@@ -308,7 +308,10 @@ class Zlistbox( ):
         self.items=items
         self.listbox = Gtk.ListBox()
         self.value=""
-        
+
+        # BUG : depuis lmde7, la 1e ligne est automatiquement selectée !
+        if initvalue=="" : initvalue=items[0]
+
         # Ajout des éléments
         for item in items:
             zlabel = Gtk.Label(label=item)
@@ -318,6 +321,7 @@ class Zlistbox( ):
 
 
         self.listbox.connect("row-activated", self.on_item_selected)
+
 
         self.owner.initvalues[self.id]=initvalue
 
@@ -330,7 +334,6 @@ class Zlistbox( ):
         # Ajout du conteneur à la fenêtre  
         # le 1e True répartit les widgets sur l'espace disponible , le 2e True aggrandit les widget
         hostbox.pack_start(frame,True,False,0)
-
 
 
     def Setvalue(self,initvalue):

@@ -1,0 +1,7 @@
+# mettre TEMPORAIREMENT le clavier Français
+setxkbmap fr
+
+echo "Le clavier a été mis temporairement en clavier Français"
+read -p "❗️Taper RETURN pour continuer" ZZZ
+
+

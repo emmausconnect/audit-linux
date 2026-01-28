@@ -5,44 +5,88 @@
 ======================================================
 
 --------------------------
-Usage:
+Rappel:
+--------------------------
+Pour ouvrir une fenêtre "Terminal", pré-positionnée sur le bon répertoire
+- dans l'explorer, ouvrir le répertoire
+- click droit sur une zone vide => Ouvrir dans un terminal
+
+Quand un script est marqué "exécutable", on peut l'exécuter directement depuis l'explorer en double cliquant dessus
+(choisir ensuite l'option "lancer dans un terminal")
+ATTENTION !!!
+Pour que ceci fonctionne, il faut que la clé USB soit formatée en Ext4 ou NTFS  ( FAT32 ne supporte pas le flag "exécutable" )
+
+
+
+--------------------------
+Installation:
 --------------------------
 
-  Décompresser le fichier zip dans un répertoire audit ( ** PAS SUR LA RACINE ** )
+  Décompresser le fichier zip dans un répertoire audit sur la clé USB ( ** PAS SUR LA RACINE ** )
+
+  Depuis LMDE7, il est possible de créer une partition DATA sur la clé bootable LMDE7, pour y recopier l'outil d'audit
+  (sans casser son caractère bootable)
+  Mais il y a 2 conditions pour que ça marche
+  - la création de la clé USB doit être faite depuis un poste LMDE7
+  - la création de la partition DATA doit être faite depuis un poste LMDE7
+  Méthode:
+  - utiliser l'outil standard "Accessoires => Disque"
+  - important: ne PAS utiliser la totalité de l'espace disponible pour cette partition, mais laisser 100MB de libre
+    ( évite d'aller effacer des trucs qui peuvent être en fin de clé USB )
+  - formater en Ext4 ( pour ne pas casser le flag "exécutable" de certains fichiers ) . A la rigueur utiliser NTFS
+
+--------------------------
+Réglage du clavier
+--------------------------
+Si on a booté directement sur une clé LMDE , sans installer LMDE , le clavier est prépositionné en qwerty
+
+Pour forcer temporairement le clavier Français, double cliquer au choix sur un de ces scripts:
+setxkbmap-fr        ( clavier azerty standard)
+setxkbmap-fr-mac    ( clavier azerty variante mac)
+
+
+--------------------------
+Usage:
+--------------------------
 
   Utiliser le login utilisateur normal 
   ( Pas besoin d'être root. Mais le script va temporairement utiliser  'sudo' pour lancer la commande inxi )
  
-  Se mettre dans le répertoire audit
-       bash audit.sh GRPCxx-xxxx    
-       bash audit.sh                 ( l'identifiant Emmaus sera demandé et mémorisé )
+  Méthode1 : Lancer le menu principal 
+
+    # Se mettre dans le répertoire audit
+    bash menu.sh
+
+
+  Méthode2 : Lancer directement l'audit en saisissant ou non l'identifiant Emmaus
+
+    # Se mettre dans le répertoire audit
+    bash audit.sh GRPCxx-xxxx   
+    bash audit.sh                 ( l'identifiant Emmaus sera demandé et mémorisé )
+
+  Méthodes alternatives: 
+    #double cliquer sur audit.sh ou menu.sh
+    ( ne marche pas avec FAT32 )
 
 
 
-  REMARQUE:  
-    un autre outil permet d'estimer l'autonomie de la batterie
+  REMARQUES:  
+  -  L'audit lance désormais une fenêtre qui affiche les infos du PC.  Penser à fermer/minimiser cette fenêtre, si elle recouvre les écrans de saisie ...
+  -  Un autre outil permet d'estimer l'autonomie de la batterie
         bash batterie.sh
 
 -------------------------------------------------------------------
 Limitations:
 -------------------------------------------------------------------
-  Ne fonctionne qu'avec LMDE6 ( pas garanti sur d'autres Linux )
-   * testé positivement sur LinuxMint22.1
+  Ne fonctionne qu'avec LMDE6/LMDE7 ( pas garanti sur d'autres Linux )
+   * testé positivement sur LinuxMint22.1 
 
-  Au besoin, booter sur une clé LMDE6, et lancer l'audit depuis une autre clé
+  Au besoin, booter sur une clé LMDE, et lancer l'audit depuis une autre clé
 
   Sur d'autres Linux, inxi peut donner des résultats différents, ou il peut manquer des packages : python3-qrcode
   
 
 
-
--------------------------------------------------------------------
-Nouvelles infos détectées:
--------------------------------------------------------------------
-Type de sique HDD/SSD
-Disque NVME
-Taille écran
-Webcam  ( fiabilité à vérifier ...)
 
 -------------------------------
 Calcul des notes
@@ -57,10 +101,7 @@ On peut donc changer les règles, sans toucher au code ...
   #CATEGORY    définit la correspondance Note/Categorie
 
 Remarques:
-- une marge de 6% est appliquée pour comparer avec les valeurs seuil:
-  (un PC de 16GB de mémoire, peut montrer uniquement 15.35GB de mémoire)
 - pour #MODIF les règles dont la colonne 1 est  vide sont ignorées
-- pour Linux, le seuil pour une note mémoire  -8 est abaissé à 2GB ( Linux marche avec 2GB )
 
 -------------------------------
 Syntaxe des règles #MODIF
@@ -89,21 +130,17 @@ Si la règle s'applique, on regarde les valeurs DELTA et MAX
 -------------------------------
 Calcul de l'indice CPU
 -------------------------------
-Pour la recherche de l'indice cpu (CPUMARK), on utilise une liste cpus.csv
+Pour la recherche de l'indice cpu (CPUMARK), on utilise une liste cpus.csv stockée en local
+( Issue d'un download de cpubenchmark.net : Merci à Joffrey pour la méthode automatisée )
+
 * avoir un audit indépendant du réseau
 * on ne traite que des PC vieux, donc il n'y a pas besoin d'avoir accès aux infos des cpus les plus récentes
-* la recherche automatique via une url dans www.cpubenchmark.net est extrêmement sensible à la moindre modification 
+* la recherche en temps réel du cpumark dans www.cpubenchmark.net est extrêmement sensible à la moindre modification 
   de la structure et du style de la page web
 
-Une mise à jour annuelle de ce fichier est suffisante
+Il n'est pas nécessaire d'avoir une mise à jour fréquente de ce fichier
 
-Pour mettre à jour manuellement cpus.csv
-* aller sur https://www.cpubenchmark.net/CPU_mega_page.html
-* choisir:  show ALL results
-* Sélectionner le tableau (en incluant la 1e colonne qui contient une icône, mais pas la ligne d'en-tête)
-* PASSER Calc en langue Anglaise !! ( pour éviter que la virgule servant de  séparateur de milliers soit vue comme une décimale 
-* Recopier dans cpus.csv  ( le copier/coller peut être très lent ... )
-* ATTENTION : ne pas abimer la 1e ligne d'en-tête du CSV
+
 
 
 -------------------------------

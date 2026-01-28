@@ -1,4 +1,4 @@
-VERSION=2.6.0
+VERSION=2.7.1
 #------------- files ----------------------
 audit.py
 audit.sh
@@ -21,11 +21,27 @@ regles.csv
 version.txt
 changelog.txt
 finitions.py
+setxkbmap-fr
+setxkbmap-fr-mac
 DecouverteMonPC-Linux
 doc
 modeles
 addons
 esn
+
+!----------------------------------
+zcall.exe
+menuwin.cmd
+#menuwin.exe
+menuwin.py
+_internal 
+DecouverteMonPC-Win
+win
+curlse
+utils
+ihmwin.py
+
+
 
 
 
