@@ -128,8 +128,11 @@ class Zbutton():
         self.button.connect("clicked", self.on_button_clicked)
         # bouton par defaut
         if default : 
-            self.button.set_can_default(True)
+            self.button.set_can_default(True)  # sinon set_default ne marche pas
             self.owner.root.set_default(self.button)  
+
+            self.owner.default=self  # memorise  l'existence d'un bouton par defaut
+
  
         hostbox.pack_start(self.button, True, False, 0)
 
@@ -196,6 +199,15 @@ class Zentry():
     def Getvalue(self):
         return self.entry.get_text()
 
+    def on_keypress( self, widget , event):
+        if event.keyval == Gdk.KEY_Return:
+            zobj=self.owner.default 
+            zobj.on_button_clicked( zobj.button )  # simule un click
+            #zobj.on_button_clicked( zobj.button )
+            return True # event traité
+        return False # event non traité
+        
+
 #---------------------------------------------------
 # Check button avec un label , et un contenu initial
 # Si initvalue != ""  le bouton est checké
@@ -247,9 +259,10 @@ class Zradio():
 
         if not group in owner.groups:
             owner.groups[group]=None  # None pour initialiser le group
-            owner.groupsvalue[group]=""
+
             owner.Register(group,self)  # par defaut on enregistre le 1er, mais après on enregistre celui dont id=initvalue
             owner.initvalues[self.group]=id
+            owner.groupsvalue[group]=id
 
         self.radio=Gtk.RadioButton(group=owner.groups[group],label=titre)
         self.radio.connect("toggled", self.on_button_toggled, id)
@@ -257,6 +270,7 @@ class Zradio():
         if id == initvalue: 
             self.owner.initvalues[self.group]=initvalue
             self.owner.Register(group,self)  # on enregistre celle dont  id=initvalue
+            owner.groupsvalue[group]=id
         # sera utilisé par le button suivant
         owner.groups[group]=self.radio 
 
@@ -271,7 +285,8 @@ class Zradio():
 
     def on_button_toggled(self, widget,id):
         s= self.radio.get_active()
-        if s : self.owner.groupsvalue[self.group] = id
+        if s : 
+            self.owner.groupsvalue[self.group] = id
 
 
 #---------------------------------------------------
@@ -361,6 +376,7 @@ class Zdialog():
         self.groups={}  # pour les radiobuttons
         self.groupsvalue={}  # pour stocker la valeur d'un groupe de radiobuttons
         self.initvalues={}   # stocker les valeurs initiales des widgets
+        self.default=None    # le Zbutton qui est bouton par defaut
         #self.set_default_size(200,2500)
         #self.set_position( Gtk.WindowPosition.CENTER_ALWAYS )
 
@@ -424,6 +440,20 @@ class Zdialog():
             if id in self.widgets:
                 self.widgets[id].Setvalue( initvalue )
 
+        # si le dialog a un button par defaut, il faut que le ENTER sur le Zentry appelle l'action du button
+        if self.default is not None:
+
+            # s'il n'y a pas de widget Entry il faut mettre le button.grab_focus ici, car sinon risque qu'il ne soit pas pris en compte !
+            self.default.button.grab_focus()
+
+            # on cherche les widget Entry, et on trappe leur event "key-press" pour gérer le RETURN           
+            for id,zobj in self.widgets.items():
+                cname = type(zobj).__name__ 
+                if cname.find("Zentry") > -1:
+                    zobj.entry.grab_focus()
+                    zobj.entry.connect("key-press-event", zobj.on_keypress)
+
+ 
         if not self.modeless:
             self.root.connect("destroy", Gtk.main_quit)
             self.root.show_all()

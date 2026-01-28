@@ -6,6 +6,9 @@
 import re,sys,os
 import json
 import zipfile
+import http.client
+
+
 
 upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -36,13 +39,43 @@ SerialNumbers="""
 #=====================================================================================
 """
 
+def ISWIN():
+    if "HOME" in os.environ :
+        return False
+    else :
+        return True
+
+WIN=ISWIN()
+
 #----------------------------------------------------------
 # Se positionne sur le drive/dir du script
+#----------------------------------------------------------
 def ChdirScript():
     file=sys.argv[0]
     mydir=os.path.dirname(file)
     if mydir == "" : mydir= "."  # necessaire si script sans nom de repertoire
     os.chdir(mydir)
+
+#----------------------------------------------------------
+# Lancer un exe ou le browser
+#----------------------------------------------------------
+def WinExecWait(file):
+    zedir = os.path.dirname(file)
+    if not os.path.isdir(zedir):
+        Zinputbox( "ERREUR", f"REPERTOIRE INTROUVABLE:  {zedir}\nAuriez vous oublié de recopier le répertoire outils ? ", ""  )    
+        return
+
+    # rajouter ""  est obligatoire pour mettre le nom de fichier entre quotes !
+    cmd=f'start /WAIT "" "{file}"'   
+    print(cmd)
+    os.system( cmd )
+
+def Browser(file):
+        if WIN:
+            cmd=f"start {file}"
+        else:
+            cmd=f"firefox {file}"    
+        os.system(cmd)  
 
 #----------------------------------------------------------
 #----------------------------------------------------------
@@ -203,7 +236,75 @@ def TestsUnitaires(txt):
 
 
 
-    
+#------------------------------------------------------------------
+# Lit un fichier texte defini par une url en https 
+#
+# renvoie le contenu ou "" si pas trouvé
+#--------------------------------------------------------------------  
+def Download( host , uri ,outfile=""):
+    if os.path.isfile( outfile) : os.remove( outfile)
+    data=""
+
+    try:
+
+        conn = http.client.HTTPSConnection(host,timeout=5)
+        conn.request("GET", uri, headers={"Host": host})
+
+        response = conn.getresponse()
+
+        #print("STATUS=",response.status)
+        if response.status == 200 : 
+            data=response.read()
+        conn.close()
+
+        if outfile != "" :
+            with open( outfile, "wb") as f:
+                f.write(data)
+            return outfile
+        else:
+            return data
+    except:
+        #print("ECHEC Download")
+        return ""
+
+
+
+#------------------------------------------------------------------
+# Lit le N° de version 
+#
+#------------------------------------------------------------------
+def GetLocalVersion():
+    filename="version.txt"
+    if not os.path.isfile(filename): 
+        txt=""
+    else:
+        with open(filename,"r") as f:
+            txt = f.read()
+
+    txt=txt.replace("\r" ,"")
+    lines=txt.split("\n")
+    version=lines[0]
+    tmp=version.split("=")
+    version=tmp[-1]
+
+    return version
+
+def GetRemoteVersion():
+    data = Download( "audits.emmaus-connect.org", "/api/apps/linux/latest"  )
+    if data == "" : return ""
+    items=json.loads(data)
+    return items.get("version","")
+
+# aide à comparer des versions
+# transforme 12.0.1  en 9012.9000.9001
+def FormatVersion(version):
+    items=version.split(".")
+    out=[]
+    for item in items:
+        tmp=9000+int(item)
+        out.append( f"{tmp}" ) 
+    return ".".join(out)
+
 #------------------------------------------------------------------
 # Lit un fichier texte defini par une url en https ou un fichier local
 #
@@ -211,7 +312,7 @@ def TestsUnitaires(txt):
 #
 # on utilise curl, car python3-requests n'est pas installé sur certains Linux ( Debian Xfce )
 #------------------------------------------------------------------
-def ReadUrl(url):
+def ReadUrl(url,tmpfile="ztmp.txt"):
 
     # cas d'un fichier local
     if not url.startswith("https"):
@@ -220,16 +321,16 @@ def ReadUrl(url):
             return f.read()
 
     # cas d'une url
-    filetxt="/tmp/txt.txt"
-    if os.path.isfile(filetxt) : os.remove(filetxt)
-    cmd=f"curl -s -o {filetxt} {url}"
+    if os.path.isfile( tmpfile) : os.remove( tmpfile)
+    cmd=f"curl -s -o {tmpfile} {url}"
     os.system(cmd)
  
-    if not os.path.isfile(filetxt) : return ""
+    if not os.path.isfile(tmpfile) : return ""
 
     txt=""
     with open(filetxt,"r") as f:
         txt=f.read()
+    os.remove( tmpfile )
 
     return txt
 
@@ -243,68 +344,48 @@ def ReadUrl(url):
 #        txt=""
 
 
-#------------------------------------------------------------------
-# Lit le N° de version
+
+
+
+           
+
+
+#=================================================================
+# Stocke dans un csv les correspondances entre noms de cpu
 #
-#------------------------------------------------------------------
-def GetVersion( url ):
-    txt=ReadUrl( url )
-    txt=txt.replace("\r" ,"")
-    lines=txt.split("\n")
-    version=lines[0]
-    tmp=version.split("=")
-    version=tmp[-1]
+# renvoie le nom de cpu modifié si on le trouve dans la liste
+#=================================================================
+class CpuChange:
 
-    return version
+    data=None
+    csv="cpuchange.csv"
 
-# aide à comparer des versions
-# transforme 12.0.1  en 9012.9000.9001
-def FormatVersion(version):
-    items=version.split(".")
-    out=[]
-    for item in items:
-        tmp=9000+int(item)
-        out.append( f"{tmp}" ) 
-    return ".".join(out)
+    def __init__(self):
+        if self.data is None:
 
-#------------------------------------------------------------------
-# Update un .zip si la version dans version.txt est inferieure à celle dans remotedir/version.txt
-#
-#------------------------------------------------------------------
-def UpdateMe( remotedir):
-    localv=GetVersion( "version.txt")
-    remotev=GetVersion( remotedir +"/version.txt")
+            with open( self.csv ,"r" ) as f:
+                lines=f.readlines()
 
-    if localv == "" or remotev == "": return
+            self.data=[]
+            for line in lines:
+                line=line.strip(" \r\n")
+                if line != "":
+                    items=line.split(";",1)
+                    self.data.append( items )
 
-    localvnew=FormatVersion(localv)
-    remotevnew=FormatVersion(remotev)
-    #print(localv,remotev,localvnew,remotevnew)
+    def Adapt( self,cpuname ):
+        for elem in self.data:
+            pattern,newvalue= elem
+            if pattern != "" and cpuname.find( pattern ) > -1 :
+                return newvalue
+        return cpuname
 
-    if localvnew < remotevnew :
+def vazy():
+    UpdateMe()
 
-        print(f"Une version plus récente est disponible !\nVersion actuelle: {localv}  \nVersion disponible: {remotev}" )
-        i=InputValue("Mettre à jour la version [ o / n ] ? ", ["o","n"] )
-        if i != "o" : return
-
-        zipfile=f"audit-linux{remotev}.zip"
-        zipremote=remotedir + "/" + zipfile
-        ziplocal= ".." + "/" + zipfile
-        fulldir=os.path.abspath("..")
-
-        if remotedir.startswith("https:") :
-            cmd=f"curl -o {ziplocal} {zipremote}"
-        else:
-            cmd=f"cp {zipremote} {ziplocal}"
-        print(cmd)
-        code=os.system(cmd)
-
-        if code != 0 :
-            print (" *** ERREUR: contenu non trouvé !")
-        else:
-            print( f"{zipfile} a été créé dans {fulldir}" )
-
-
+if __name__ == '__main__':
+    vazy()
+        
 #files=[ "GRPC99-9999/GRPC99-9999.audit.txt","GRPC99-9999/GRPC99-9999.bolc.csv" ]
 #MakeZip( "zzz.zip", files)
 

@@ -20,23 +20,24 @@ import re
 import sys
 import datetime
 import os
-
-if "HOME" in os.environ :
-    WIN=False
-    from ux.linux import *
-else :
-    WIN=True
-    from win.windows import *
-
+import html
 
 # fichiers include
-from  outils import *   
+from  outils import *  
+WIN=ISWIN()
+if WIN:
+    from win.windows import *
+else:
+    from ux.linux import *
+
+
+
 from  rtf import *   
 from ihm  import *
 
 
 
-VERSION=GetVersion("version.txt")
+VERSION=GetLocalVersion()
 
 USEIHM=True
 
@@ -60,6 +61,8 @@ FILERAPPORT="audit.txt"             # fichier d'audit déposé sur le Bureau
 FILEFICHE="FicheSmartphone.rtf"     # mini fiche à coller sur le PC  QRcode normal pour appli smartphone
 FILEDOUCHETTE="FicheDouchette.rtf" # mini fiche à coller sur le PC  QRcode douchette
 FILEACHAT="FicheAchat.rtf"         # fiche d'achat
+FILECARACT="caract.html"           # caracteristiques techniques
+FILEPARENTAL="LeControleParental.pdf"
 
 
 DECOUVERTE=f"DecouverteMonPC-{OSTARGET}"      # Répertoire des docs à recopier sur le Bureau
@@ -115,8 +118,8 @@ def DataGet( dir, file ):
 #  RETURN
 #     nom du cpu nettoyé
 #
-#   valeur Inxi                                         Valeur cpubenchmark.net
-#   Intel (R) Core(TM) i5-6200U CPU @ 2.30GHZ           Intel (R) Core(TM) i5-6200U CPU @ 2.30GHZ
+#   valeur Inxi                                         Valeur cpubenchhmark.net
+#   Intel (R) Core(TM) i5-6200U CPU @ 2.30GHZ           Intel Core i5-6200U @ 2.30GHZ
 #   Intel Core i7-5600U                                 Intel Core i7-5600U @ 2.60GHz
 #   13th Gen Intel Core i7-1360P                        Intel Core i7-1360P 
 #--------------------------------------------------------   
@@ -163,16 +166,20 @@ def CleanCpuname(cpuname):
 #   ""  si pas trouvée
 #--------------------------------------------------------   
 def FindCPUMARK(cpufile,cpuname ):
+
     # lire le fichier des cpu
     cpulist=ReadCSV(cpufile,"")
 
-    cpuname=CleanCpuname(cpuname)
-    newcpuname=cpuname.lower()
-
     print(f"Cherche: {cpuname}")
 
+    cpuname=CleanCpuname(cpuname)
+    cpuname=CpuChange().Adapt(cpuname)
+    newcpuname=cpuname.lower()
+
+
+
     for cpudata in cpulist:
-        key=cpudata["CPUNAME"]
+        key=cpudata["NAME"]
         newkey=key.lower()
         if ( len(newkey) > 10 and newcpuname.find(newkey) > -1) or ( newkey.find(newcpuname) > -1 ):
 
@@ -301,7 +308,10 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
     dialog=Zdialog(title,margin,spacing)
     vbox=dialog.area
 
-    Zentry(dialog, vbox, "benevole", "Nom Bénévole:","up")
+    hbox=Zhbox(vbox)
+    Zentry(dialog, hbox, "benevole", "Nom Bénévole:","r")
+    Zentry(dialog, hbox, "nomcomm", "Modèle Commercial","r",infos["Modele"] )
+
     Zentry(dialog, vbox, "observations", "Observations:","up")
 
     Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,"")
@@ -317,6 +327,7 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
     Zentry(dialog,boxbolc , "iddon", "N° du don:","r")  
 
     boxactions= Zhbox(vbox,0,0)
+    Zbutton(dialog, boxactions ,"QUIT", "ABANDON","Orange")
     Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
 
     # affiche le dialog, attend la sortie, et renvoie le résultat
@@ -433,10 +444,11 @@ def ComputeNoteModif( infos , csvfile ,section ,txtnotes,initialnote):
                 infosvalue=infos[critname] 
                 # si critvalue est vide, on vérifier seulement que le critname existe dans infos
                 # si non, on verifie que la valeur reelle dans infos est inferieure à critvalue
-                if critvalue != "" :
+                if critvalue == "" :
+                    explain.append(f"{critname}")
+                else:
                     if float( infosvalue ) >= float( critvalue) : ok=False
-
-                explain.append(f"{critname}={infosvalue}")
+                    explain.append(f"{critname}={infosvalue}")
 
 
 
@@ -456,7 +468,7 @@ def ComputeNoteModif( infos , csvfile ,section ,txtnotes,initialnote):
             txtnotes.append( f"\nREGLE: {desc}" )
             txt=" ".join(explain)
             txtnotes.append(f"VALEURS: [{txt}]" )
-            txtnotes.append(f"Note Initiale={memnote} Note Modifiée={note}")
+            txtnotes.append(f"Note Initiale={memnote}   Note Modifiee={note}")
 
     return note
 
@@ -512,6 +524,8 @@ def MakeSendFiles(xfer=True):
     filedouchette=  os.path.join( dir,f"{Admin.ECID}.{FILEDOUCHETTE}")
     filescan=       os.path.join( dir,f"{Admin.ECID}.{FILESCAN}")
     fileachat=      os.path.join( dir,f"{Admin.ECID}.{FILEACHAT}")
+    filecaract=     os.path.join( dir,f"{Admin.ECID}.{FILECARACT}")
+    fileparental=     os.path.join( DECOUVERTE, FILEPARENTAL)
 
     # fabrication du nom de fichier bolc pour import sftp
     # on le sauvegarde en local, pour pouvoir relancer un import bolc ultérieur
@@ -525,6 +539,7 @@ def MakeSendFiles(xfer=True):
     MakeRapport( filerapport )
     MakeFiches( filefiche , filedouchette )
     MakeFicheAchat(fileachat)
+    Caract().Html(filecaract)
 
     # copy fichier scan systeme
     CopyFile2File( TMPSCANFILE , filescan )
@@ -532,7 +547,7 @@ def MakeSendFiles(xfer=True):
 
     # Copie du rapport sur le Bureau et de DecouverteMonPC .  Le Bureau peut s'appeler Bureau ou Desktop
     print(f"\nCopie du rapport d'audit sur le Bureau")
-    code=Copy2Desktop( [ filerapport , filefiche, filedouchette, DECOUVERTE ] )
+    code=Copy2Desktop( [ filerapport , filefiche, filedouchette, DECOUVERTE , fileparental] )
     if not code:
         print( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
 
@@ -562,7 +577,7 @@ def MakeSendFiles(xfer=True):
     # Génération d'un .zip pour  envoi 
     print(f"\nCreation du fichier: {ZIPFILE} pour envoi vers audits.emmaus-connect.org" )
     if os.path.isfile(ZIPFILE) :  os.remove(ZIPFILE)
-    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat ]
+    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat , filecaract ]
     MakeZip( ZIPFILE , files )
 
     # IHM de transfer
@@ -649,6 +664,9 @@ def MakeRapport(filename):
 
     txt2=""
     for key,value in infos.items():
+        # astuce pour remplacer la valeur numerique des cles SSD et HDD
+        if key in [ "SSD","HDD" ] : value="oui"
+
         txt2=txt2 + f"{key:<20}: {value}" + CRLF
 
 
@@ -684,7 +702,8 @@ def MakeFicheAchat(filename):
     with open(template,"r") as f:
         txt=f.read()
 
-    txt=txt.replace("LEMAT", f'{infos["Marque"]} {infos["Modele"]}' )
+    modele=Admin.nomcomm
+    txt=txt.replace("LEMAT", f'{infos["Marque"]} {modele}' )
     txt=txt.replace("LIDEC",Admin.ECID)
     txt=txt.replace("LESN",infos["NumeroSerie"])
     txt=txt.replace("LAMARK",infos["Marque"])
@@ -822,6 +841,107 @@ def MakeBolc(filename):
     with open(filename,"w",newline="") as f:
         f.write(txt + "\r\n")
                          
+#===========================================================================================
+# Collecte des Tests Materiel
+#
+#  les infos sont mémorisées dans un fichier -caract.txt au format json
+#===========================================================================================
+class Caract():
+
+    def __init__(self):
+        self.file=os.path.join(TMPDISK,"-caract.txt")
+        if os.path.isfile( self.file):
+            with open(self.file,"r") as f:
+                self.data = json.load(f)
+        else:
+            self.data={ }
+
+
+    def Save(self,data):
+        global infos
+        # sauvegarde dans le fichier
+        txt=json.dumps( data , indent=4)
+        with open(self.file,"w") as f:
+            f.write(txt)
+        # sauvegarde dans infos
+        #infos["Ecran"] = self.data["ECRAN"]
+
+    def Html(self,file):
+        txt="<HTML><HEAD><meta charset='UTF-8'></HEAD><BODY>\n<H1>Caracteristiques Techniques</H1><TABLE BORDER=2>\n"
+        for key,value in self.data.items():
+            value=html.escape(value)
+            txt=txt+ f"<TR><TD>{key}</TD><TD>{value}</TD></TR>\n"
+        txt=txt+"</TABLE></BODY></HTML>\n"
+        
+        with open(file,"w") as f:
+            f.write(txt)
+            
+        
+
+    def Dialog(self):
+        radioitems=["CLAVIER","PAVE TACTILE","SOURIS","WEBCAM", "DVD/GRAVEUR","LECTEUR SD","PORT SIM", "SORTIE VGA","SORTIE HDMI","SORTIE DISPLAY PORT","SORTIE SON","MICRO","BLUETOOTH","PORT ETHERNET","CARTE WIFI","STATION D'ACCUEIL","ALIMENTATION - CHARGEUR",
+                    "SANTE Disque1","SANTE Disque2"]
+
+
+        radiostatus=[ "TESTE OK",  "HS",  "PRESENT" ,  "ABSENT" ]
+        radiostatusdisk=["NEUF","CORRECT","PRUDENCE","MAUVAIS", "ABSENT" ]
+
+        entryitems= { "USB" : "Nbre Ports USB" , "USBHS" : "Dont USB HS" , "BATTERIE" : "Autonomie Batterie (mn)" }
+
+        dialog=Zdialog("COLLECTE RESULTATS TESTS MATERIELS",5,5)
+        vbox=dialog.area
+        hboxradio=Zhbox(vbox)
+        bradio1=Zvbox(hboxradio,2,2)
+        bradio2=Zvbox(hboxradio,2,2)
+
+        hboxentry=Zhbox(vbox,5,5)
+
+        # Liste de RadioButtons
+        grid1=Zgrid(bradio1)
+        grid2=Zgrid(bradio2)
+        col=0
+        row=0
+        maxrows=len(radioitems) // 2 +1
+        grid=grid1
+        for group in radioitems:
+
+            if row >= maxrows:
+                row=0
+                grid=grid2
+
+            hbox0=Zhcell(grid,0,row,2,2)
+            hbox1=Zhcell(grid,1,row,2,2)
+            row=row+1
+
+            if group.find("SANTE") < 0:
+                radiolist=radiostatus
+            else:
+                radiolist=radiostatusdisk
+
+            Ztext(  hbox0 , group)
+            for txt in radiolist:
+
+                # Initialisation: si la valeur est dans self.data, on initialise selon cette valeur
+                checked=self.data.get( group , "ABSENT" )
+                Zradio(dialog, hbox1 , txt, txt,checked,group)
+
+        # Liste de chanps de saisie
+        index=0
+        for key, txt in entryitems.items():
+            #hbox=Zhcell(grid,2,index,5,10)
+            initvalue=self.data.get(txt,"")
+            Zentry(dialog,hboxentry,txt,txt,"r",initvalue)
+            index=index+1
+
+        # Boutons quitter/sauvegarde
+        bbox=Zhbox(vbox)
+        Zbutton(dialog, bbox ,"QUIT", "QUITTER","orange") 
+        Zbutton(dialog, bbox ,"SAVE", "ENREGISTRER","yellow")       
+
+        out=dialog.Run()
+        if dialog.exitcode == "SAVE":
+            self.Save(out)
+
 #===========================================================
 # Gestion / saisie de l'identifiant ECID
 # Il est mémorisé dans un fichier local
@@ -874,7 +994,49 @@ class Ecid():
         self.Save(value)
         return value
 
-            
+#------------------------------------------------------------------
+# Download  un .zip si la version dans version.txt est inferieure à celle sur le serveur
+#
+#------------------------------------------------------------------
+def ShowChange(owner,id):
+    Browser("https://audits.emmaus-connect.org/api/apps/linux/changelog/web")
+
+def UpdateMe( remotedir =""):
+    localv=GetLocalVersion( )
+    remotev=GetRemoteVersion( )
+
+    print(f"Vérification Versions: Local={localv} Serveur={remotev} \n")
+    if localv == "" or remotev == "": return
+
+    localvnew=FormatVersion(localv)
+    remotevnew=FormatVersion(remotev)
+
+
+
+    if localvnew < remotevnew :
+
+        dlg=Zdialog( "Nouvelle Version !")
+        Ztext( dlg.area, f"Une version plus récente est disponible !\nVersion actuelle: {localv}  \nVersion disponible: {remotev}" )
+        bbox=Zhbox(dlg.area)
+        Zbutton(dlg,bbox,"QUIT","IGNORER","orange")
+        Zbutton(dlg,bbox,"SHOW","Voir les Evolutions","lightgreen", ShowChange)
+        Zbutton(dlg,bbox,"GET","Downloader","yellow")
+        out=dlg.Run()
+        exitcode=dlg.exitcode
+
+        if exitcode in [ "QUIT" , "#QUIT" ] : return
+
+        zipfile=f"audit-linux.{remotev}.zip"
+        print(f"\nDOWNLOAD en cours: {zipfile}\n")
+
+        ret=Download( "audits.emmaus-connect.org", "/api/apps/linux/download/latest" , zipfile )
+
+        if ret  != "" :
+            print (f"**** {zipfile} téléchargé ! ****\n")
+            exit()        
+        else:
+            print("*** ECHEC du download ***")
+
     
 
 
@@ -908,6 +1070,7 @@ def ProcessAudit(mini=False,xfer=False):
     # Recherche du CPUmark dans le fichier csv
     #infos["Processeur"]= "13th Gen Intel (RR) Core i5-3439Y @ 1.50GHz"  #### TEST
     #infos["Processeur"]= "13th Gen Intel (R) Core i5-3439Y @ 1.50GHz"  #### TEST
+    #infos["Processeur"]="Intel Core i5 M 520"  ##### test
     print(f"\n----------------- Recherche du processeur dans {CSVCPU} ----------------------")
     cpumark=FindCPUMARK(CSVCPU,infos["Processeur"] )
 
@@ -921,25 +1084,33 @@ def ProcessAudit(mini=False,xfer=False):
     #print(json.dumps( infos, sort_keys=False, indent=4))
 
 
-    # Sasie des infos manuelles
-    result=ManualAdminInfosIHM("Saisie Informations")
-    # si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
-    if "OK" not in result or result["OK"] == "" : return 
-
-    #print(result)
-
-    Admin.benevole=result["benevole"]
-    Admin.observations=result["observations"]
-    Admin.bolcstatut=result["bolcstatut"]
-    Admin.idrecond=result["idrecond"]
-    Admin.origine=result["origine"]
-    Admin.iddon=result["iddon"]
 
 
 
-    print("\n----------------- Calcul des notes ----------------------")
-    sectionnote="#NOTE-" + OSTARGET.upper() 
-    Admin.notebrut=ComputeNote( infos, CSVREGLES, sectionnote,Admin.txtnotes )
+
+    print("\n----------------- Calcul des notes  ----------------------")
+
+    # On fait 2 fois le calcul de notes, pour detecter la compatibilite WIN et LINUX
+    # la dernière fois est celle de l'OS cible
+    # INACTIVE !!!
+    if False:
+        for os in [ "WIN", "LINUX" ]:
+            tmptxtnotes=[]
+            sectionnote="#NOTE-" + os  
+            note = ComputeNote( infos, CSVREGLES, sectionnote, tmptxtnotes )
+            target="Compatible-" + os
+            if note < 0 : value ="non"
+            else:         value="oui"
+            infos[target]=value
+            print(f"==> {target}: {value}\n" )
+
+    tmptxtnotes=[]
+    sectionnote="#NOTE-" + OSTARGET.upper()  
+    note = ComputeNote( infos, CSVREGLES, sectionnote, tmptxtnotes )
+
+    Admin.notebrut= note
+    Admin.txtnotes = tmptxtnotes
+
     Admin.notenet=ComputeNoteModif( infos, CSVREGLES, "#MODIF" , Admin.txtnotes, Admin.notebrut )
 
     print( "\n".join(Admin.txtnotes)  )
@@ -951,6 +1122,20 @@ def ProcessAudit(mini=False,xfer=False):
 
     # si Mini Audit , pas d'envoi ....
     if mini : return
+
+    # Sasie des infos manuelles
+    result=ManualAdminInfosIHM("Saisie Informations")
+    # si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
+    if result.get("OK","") == "" : return 
+
+    #print(result)
+    Admin.nomcomm=result["nomcomm"]
+    Admin.benevole=result["benevole"]
+    Admin.observations=result["observations"]
+    Admin.bolcstatut=result["bolcstatut"]
+    Admin.idrecond=result["idrecond"]
+    Admin.origine=result["origine"]
+    Admin.iddon=result["iddon"]
 
 
     print("\n----------------- Création et envoi des fichiers vers audits.emmaus-connect.org  et Bolc ----------------------")
@@ -975,6 +1160,9 @@ except:
 
 # Se positionne sur le drive/directory du script principal
 ChdirScript()
+
+# charger la maj
+UpdateMe()
 
 # Test interne désactivé
 cpulist=[ "Intel (R) Core(TM)      i5-6200U CPU @ 2.30GHZ  @{Name=bidule}" ,   " AMD 3456 @  2.30GHZ      with double option" ]

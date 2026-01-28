@@ -21,10 +21,11 @@ def Zinputbox(title,msg,entrylabel="",initvalue=""):
     Ztext(vbox,msg)
     # zone de saisie
     if entrylabel != "":  
-        Zentry(dlg,vbox,"ZVALUE",entrylabel,"up",initvalue,focus=True)
+        ze = Zentry(dlg,vbox,"ZVALUE",entrylabel,"up",initvalue,focus=True)
 
     # Bouton de sortie
-    b=Zbutton(dlg,vbox,"OK","OK","yellow")
+    b=Zbutton(dlg,vbox,"OK","OK","yellow",default=True)
+
 
 
     result=dlg.Run()

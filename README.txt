@@ -97,10 +97,11 @@ Pour la recherche de l'indice cpu (CPUMARK), on utilise une liste cpus.csv
 
 Une mise à jour annuelle de ce fichier est suffisante
 
-Pour mettre à jour cpus.csv
+Pour mettre à jour manuellement cpus.csv
 * aller sur https://www.cpubenchmark.net/CPU_mega_page.html
 * choisir:  show ALL results
 * Sélectionner le tableau (en incluant la 1e colonne qui contient une icône, mais pas la ligne d'en-tête)
+* PASSER Calc en langue Anglaise !! ( pour éviter que la virgule servant de  séparateur de milliers soit vue comme une décimale 
 * Recopier dans cpus.csv  ( le copier/coller peut être très lent ... )
 * ATTENTION : ne pas abimer la 1e ligne d'en-tête du CSV
 

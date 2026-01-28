@@ -1,3 +1,22 @@
+-------------------- V2.4.0  12 Juin 2025 ------------------------------- -
+Fonctions:
+    Nouvelle catégorisation: mise à jour de regles.csv
+
+    Le fichier cpuchange.csv  permet de mémoriser des listes de correspondances: pour les cas où le nom de CPU trouvé par l'analyse système est très différent de cpubenchmark.net
+        ex:  i5 M 520  => Intel Core i5-520M
+
+    Possibilité de saisir le nom commercial du modèle de PC, et de l'injecter dans la FicheAchat
+
+    Copie du fichier LeControleParental.pdf sur le bureau
+
+    MAJ auto: Vérifie l'existence d'une version plus récente sur le serveur Emmaus, et propose le download
+
+Interne:
+    Purge de cpus.csv : 
+        contient désormais uniquement les cpu "mono socket" ( on ne traite pas de serveurs haut de gamme ! )
+        on se débarrasse de la fréquence cpu située après @
+
+
 -------------------- V2.3.0  25 Mai 2025 ------------------------------- -
 Fonctions:
     Génération d'une "FicheAchat.rtf" , suivant le modèle Jean-Jacques

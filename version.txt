@@ -1,10 +1,11 @@
-VERSION=2.3.0
+VERSION=2.4.0
 #------------- files ----------------------
 audit.py
 audit.sh
 batterie.py
 batterie.sh
 cpus.csv
+cpuchange.csv
 outils.py
 ux
 ihm.py
