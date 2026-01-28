@@ -6,7 +6,8 @@ import signal
 import sys
 import datetime
 
-from  outils import *   # outils.py
+from ux.linux import *
+
 
 inxifile="/tmp/tmp.txt"
 

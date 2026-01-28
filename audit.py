@@ -21,6 +21,13 @@ import sys
 import datetime
 import os
 
+if "HOME" in os.environ :
+    WIN=False
+    from ux.linux import *
+else :
+    WIN=True
+    from win.windows import *
+
 
 # fichiers include
 from  outils import *   
@@ -50,8 +57,9 @@ ZIPFILE=TMPDISK+ "audit-zip.zip"              # zip des fichiers à envoyer vers
 
 FILEBOLC="bolc.csv"                 # fichier .csv pour import manuel dans le Bolc
 FILERAPPORT="audit.txt"             # fichier d'audit déposé sur le Bureau
-FILEFICHE="fiche.rtf"               # mini fiche à coller sur le PC  QRcode normal
-FILEDOUCHETTE="fiche-douchette.rtf" # mini fiche à coller sur le PC  QRcode douchette
+FILEFICHE="FicheSmartphone.rtf"     # mini fiche à coller sur le PC  QRcode normal pour appli smartphone
+FILEDOUCHETTE="FicheDouchette.rtf" # mini fiche à coller sur le PC  QRcode douchette
+FILEACHAT="FicheAchat.rtf"         # fiche d'achat
 
 
 DECOUVERTE=f"DecouverteMonPC-{OSTARGET}"      # Répertoire des docs à recopier sur le Bureau
@@ -60,24 +68,44 @@ CSVREGLES="regles.csv"                        # fichier .csv décrivant les règ
 CSVCPU="cpus.csv"                             # fichier .csv contenant l'indice cpu ( CPUMARK ) tiré de cpubenchmark.net
 CPUBENCHMARK="https://www.cpubenchmark.net/CPU_mega_page.html"   
 
+#==================================================================
+# infos administratives
+#   utilisation: Admin.xxx
+#==================================================================
+class Admin():
+    # Notation
+    notebrut=0          # note initiale, basée sur mémoire/disque/cpu
+    notenet=0           # note finale, après règles spécifiques, et notes technique/esthetique
+    categorie=""        # categorie du PC
+    txtnotes=[]         # Texte pour les calculs de notes, qui sera rajouté au rapport
 
-# variables globales: ces valeurs pourraient être stockées dans infos
-# mais comme infos est affiché automatiquement dans le rapport, certaines rubriques ne seraient pas à la place souhaitée ...
-reconditionneur=""  # nom du reconditionneur
-remarques=""        # remarques saisies
-notebrut=0          # note initiale, basée sur mémoire/disque/cpu
-notenet=0           # note finale, après règles spécifiques, et notes technique/esthetique
-categorie=""        # categorie du PC
+    benevole=""         # nom du benevole
+    observations=""        # observations saisies
 
-# autres variables globales
-don=""              # Numero du don dans le Bolc, auquel le PC est associé
-idrecond=""         # Si reconditionneur PRO, ID du PC chez ce reconditionneur
-origine=""          # Origine du PC ( ASF, Ecodair, Trira, ESN ... )  utilisation variable selon les sites
-bolcstatut=""       # statut dans le bolc
-auditdate=""        # date de l'audit
-txtnotes=[]         # Texte pour les calculs de notes, qui sera rajouté au rapport
+    # autres infos 
+    ECID=""             # identifiant GRPCxx-nnnn
+    iddon=""            # Numero du don dans le Bolc, auquel le PC est associé
+    idrecond=""         # Si reconditionneur PRO, ID du PC chez ce reconditionneur
+    origine=""          # Origine du PC ( ASF, Ecodair, Trira, ESN ... )  utilisation variable selon les sites
+    bolcstatut=""       # statut dans le bolc
+    auditdate=""        # date de l'audit
 
 
+
+#--------------------------------------------------------
+# Sauvegarde/Relit des infos  stockées en local
+#--------------------------------------------------------
+def DataSave( dir, file,data ):
+    filename=os.path.join(dir,file)
+    with open( filename,"w") as f:
+        f.write(data)
+
+def DataGet( dir, file ):
+    filename=os.path.join(dir,file)
+    if not os.path.isfile(filename): return ""
+    with open( filename,"r") as f:
+        data=f.read()
+    return data
 
 #--------------------------------------------------------
 # Nettoie le nom d'une CPU, avant de la rechercher dans la liste
@@ -181,7 +209,10 @@ def ManualTechInfos(infos,cpumark):
 
 
         dialog=Zdialog("Informations Techniques",10,10)
-        vbox=dialog.area
+        area=dialog.area
+        hbox=Zhbox(area,0,0)
+        vbox=Zvbox(hbox,2,2)
+        vboxother=Zvbox(hbox,2,2)
 
         # Obtention du disque, et stockage de la taille dans les valeurs SSD ou HDD
         boxdisk=Zvbox(vbox,2,2,"Disque")
@@ -192,7 +223,7 @@ def ManualTechInfos(infos,cpumark):
             Ztext(boxdisk,"Type de disque non détecté !")
             msgdisk= f"Pour savoir si le disque est un HDD ou un SSD, vous pouvez chercher sa référence sur Internet: {infos['DisqueRef']}"
             Ztext(boxdisk,msgdisk)
-            Zlistbox(dialog, boxdisk, "DISK", "Type de disque", [ "HDD", "SSD" ] ,0 )
+            Zlistbox(dialog, boxdisk, "DISK", "Type de disque", [ "HDD", "SSD" ] , "HDD" )
         else:
             msgdisk= f"Type de disque detecté: {disktype}"
             Ztext(boxdisk,msgdisk)
@@ -212,15 +243,26 @@ def ManualTechInfos(infos,cpumark):
 
         # ajustement note
         boxdelta = Zhbox( vbox,5 ,5,"Ajustement Note" )
-        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] ,2) 
-        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , 1)
+        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] , "0") 
+        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , "0")
 
+        # autres infos
+        pctypes=[ "Portable" , "Tablette", "UC" ]
+        index=0
+        for i,value in enumerate(pctypes):
+            if value==infos["Type"] : index=i
+        Zlistbox(dialog,  vboxother,  "Type", "Type de PC", pctypes , "Portable")
+        Zentry(dialog, vboxother, "Ecran", "Taille Ecran (pouces): ","r",infos["Ecran"] )
+        
         # boutons
-        boxactions= Zhbox(vbox,0,0)
+        boxactions= Zhbox(area,0,0)
         Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
 
         # affiche le dialog, attend la sortie, et renvoie le résultat
         out= dialog.Run()
+        exitcode=dialog.exitcode
+        if exitcode == "#QUIT" : sys.exit()   # trop difficile à gérer si les infos spnt pas saisies !
+        
 
         # Traitement
         ok=True
@@ -240,6 +282,8 @@ def ManualTechInfos(infos,cpumark):
     infos["NoteTechnique"]=int(out["NoteTechnique"])
     infos["NoteEsthetique"]=int(out["NoteEsthetique"])
     infos["CPUMARK"]= cpumark
+    infos["Type"]= out["Type"]
+    infos["Ecran"]= out["Ecran"]
 
 
 
@@ -257,10 +301,10 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
     dialog=Zdialog(title,margin,spacing)
     vbox=dialog.area
 
-    Zentry(dialog, vbox, "reconditionneur", "Nom Bénévole:","up")
-    Zentry(dialog, vbox, "remarques", "Remarques:","up")
+    Zentry(dialog, vbox, "benevole", "Nom Bénévole:","up")
+    Zentry(dialog, vbox, "observations", "Observations:","up")
 
-    Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,0)
+    Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,"")
 
     boxadmin=Zvbox(vbox,5,2,"Informations administratives:")
     Ztext(boxadmin,"La manière dont ces infos sont gérées dépend du site ...\nSur certains sites, elles sont facultatives ou préchargées manuellement dans le Bolc avant reconditionnement")
@@ -270,7 +314,7 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
 
     boxbolc=Zvbox(vbox,2,2,"Transfert BOLC")
     Ztext(boxbolc,"Si le PC n'a pas déjà été créé dans le Bolc, il faut fournir le N°du don auquel il est associé. Sinon l'import échouera")
-    Zentry(dialog,boxbolc , "don", "N° du don:","r")  
+    Zentry(dialog,boxbolc , "iddon", "N° du don:","r")  
 
     boxactions= Zhbox(vbox,0,0)
     Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
@@ -292,11 +336,13 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
 #  infos: liste des infos utiles
 #  csvfile: nom du fichier csv des règles
 #  section: nom de la section du csv à utiliser
+#  txtnotes: tableau dans lequel ajouter des lignes d'explication ( UNIQUEMENT avec append() )
 # RETURN
-#  note de base
+#  note de base 
+#  txtnotes modifié
 #---------------------------------------------------
-def ComputeNote( infos , csvfile ,section ):
-    global txtnotes
+def ComputeNote( infos , csvfile ,section ,txtnotes):
+
 
     rules=ReadCSV( csvfile,section)
     finalnote=0
@@ -338,11 +384,13 @@ def ComputeNote( infos , csvfile ,section ):
 #  csvfile: nom du fichier csv des règles
 #  section: nom de la section du csv à utiliser
 #  initialnote: note initiale à modifier
+#  txtnotes: tableau dans lequel ajouter des lignes d'explication ( UNIQUEMENT avec append() )
 # RETURN
 #  note modifiée
+#  txtnotes modifié
 #---------------------------------------------------
-def ComputeNoteModif( infos , csvfile ,section ,initialnote):
-    global txtnotes
+def ComputeNoteModif( infos , csvfile ,section ,txtnotes,initialnote):
+
     maxcrit=5
     rules=ReadCSV( csvfile,section)
 
@@ -442,29 +490,41 @@ def ComputeCategorie( csvfile , note):
 #
 # Les envoie....
 #
-# Ils sont generés dans le répertoire ../IDENTIFIANT
+# Ils sont generés dans le répertoire ../ECID
 #---------------------------------------------------     
-def MakeSendFiles():
-    dir="../" + IDENTIFIANT
+def MakeSendFiles(xfer=True):
+    dir=os.path.join( "..", Admin.ECID)
     if not os.path.isdir(dir):
         os.mkdir(dir)
 
+    # suppression des fichiers  pour éviter une prolifération de fichiers bolc
+    with os.scandir(dir) as it:
+        for entry in it:
+            if entry.is_file() :
+                filename=os.path.join( dir, entry.name)
+                #print( "**Suppresion: ", filename)
+                os.remove( filename)
 
-    filebolc= ConvertFile( f"{dir}/{IDENTIFIANT}.{FILEBOLC}" )
-    filerapport=ConvertFile(f"{dir}/{IDENTIFIANT}.{FILERAPPORT}")
-    filefiche= ConvertFile( f"{dir}/{IDENTIFIANT}.{FILEFICHE}" )
-    filedouchette=ConvertFile(f"{dir}/{IDENTIFIANT}.{FILEDOUCHETTE}")
-    filescan=ConvertFile(f"{dir}/{IDENTIFIANT}.{FILESCAN}")
+
+    filebolc=       os.path.join( dir,f"{Admin.ECID}.{FILEBOLC}" )
+    filerapport=    os.path.join( dir,f"{Admin.ECID}.{FILERAPPORT}")
+    filefiche=      os.path.join( dir,f"{Admin.ECID}.{FILEFICHE}" )
+    filedouchette=  os.path.join( dir,f"{Admin.ECID}.{FILEDOUCHETTE}")
+    filescan=       os.path.join( dir,f"{Admin.ECID}.{FILESCAN}")
+    fileachat=      os.path.join( dir,f"{Admin.ECID}.{FILEACHAT}")
 
     # fabrication du nom de fichier bolc pour import sftp
+    # on le sauvegarde en local, pour pouvoir relancer un import bolc ultérieur
     date= datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    site=IDENTIFIANT[0:2]
+    site=Admin.ECID[0:2]
     filebolcimportbase = f"{site}-PORTABLE-{date}.csv"
-    filebolcimport     = ConvertFile( f"{dir}/{filebolcimportbase}" )
+    filebolcimport     = os.path.join( dir, filebolcimportbase )
+    DataSave( TMPDISK , "-bolc.txt",filebolcimport)
 
     MakeBolc( filebolc )
     MakeRapport( filerapport )
     MakeFiches( filefiche , filedouchette )
+    MakeFicheAchat(fileachat)
 
     # copy fichier scan systeme
     CopyFile2File( TMPSCANFILE , filescan )
@@ -479,7 +539,7 @@ def MakeSendFiles():
     # Rajout du détail des notes sur le rapport, avant de l'envoyer 
     with open( filerapport, "a" ) as f:
         f.write("\n\n-------------- Explications de la notation ----------------\n\n" )
-        f.write( "\n".join(txtnotes) )
+        f.write( "\n".join(Admin.txtnotes) )
  
 
 
@@ -487,7 +547,7 @@ def MakeSendFiles():
     with open( filebolc ) as f:
         bolcdata=f.read()
     with open( filebolcimport , "w" ) as f:
-        f.write( don + ";" + bolcdata)
+        f.write( Admin.iddon + ";" + bolcdata)
 
 
     # On rajoute le nom de fichier bolc dans le rapport pour audits.emmaus-connect.org
@@ -495,40 +555,63 @@ def MakeSendFiles():
     with open( filerapport, "a" ) as f:
         f.write("\n\n-------------- Import sftp  Bolc ----------------\n" )
         f.write( f"Fichier CSV: {filebolcimportbase}\n"  )
-        f.write( f"Statut BOLC: {bolcstatut}\n"  )
+        f.write( f"Statut BOLC: {Admin.bolcstatut}\n"  )
 
 
 
     # Génération d'un .zip pour  envoi 
     print(f"\nCreation du fichier: {ZIPFILE} pour envoi vers audits.emmaus-connect.org" )
     if os.path.isfile(ZIPFILE) :  os.remove(ZIPFILE)
-    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette ]
+    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat ]
     MakeZip( ZIPFILE , files )
 
-    rep = InputValue("\nEnvoyer les fichiers vers audits.emmaus-connect.org [ o / n ] ? ", ["o","n",""])
-    if rep != "o" : return
+    # IHM de transfer
+    # Si xfer , on ne pose pas la question
+    if not xfer:
+        dlgsend=Zdialog("Envoyer les fichiers vers le serveur audits et le Bolc ?",80,40)
+        hbox=Zhbox(dlgsend.area,30,30)
+        Zbutton(dlgsend , hbox, "QUIT", "QUITTER" ,"Red")
+        Zbutton(dlgsend , hbox, "EMMAUS", "Serveur Audit uniquement" ,"LightBlue")
+        Zbutton(dlgsend , hbox, "BOTH", "Serveur Audit + BOLC " ,"Yellow")
+        rep=dlgsend.Run()
+        exitcode=dlgsend.exitcode
+    else:
+        exitcode="BOTH"
 
-
-    print(f"\n-------------- envoi des fichiers vers audits.emmaus-connect.org  --------------")
-    #cmd=f"curl -X POST https://update.drop.tf/upload_zip.php -F \"ecid={IDENTIFIANT}\" -F \"actual_file=@{ZIPFILE}\"  "
-    cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={IDENTIFIANT}" -F "actual_file=@{ZIPFILE}"  '
-    os.system(cmd)
     
-    print()
 
-    # envoi du fichier bolc
-    # Pour déposer sur le bolc par sftp, il faut rajouter une 1e colonne contenant le N° du don
-    # - si le PC existe déjà dans le bolc, on peut laisser une valeur vide
-    # - sinon l'import échouera si le N° de don est vide
-    # Le nom de fichier doit être comme   GR-PORTABLE-date.csv , sinon l'import bolc l'ignore 
-    rep = InputValue("\nEnvoyer les fichiers vers le BOLC  [ o / n ] ? ", ["o","n",""])
-    if rep != "o" : return
-    print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
+    if exitcode in [ "EMMAUS", "BOTH" ] :
+        print(f"\n-------------- envoi des fichiers vers audits.emmaus-connect.org  --------------")
+        #cmd=f"curl -X POST https://update.drop.tf/upload_zip.php -F \"ecid={Admin.ECID}\" -F \"actual_file=@{ZIPFILE}\"  "
+        cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={Admin.ECID}" -F "actual_file=@{ZIPFILE}"  '
+        os.system(cmd)
+        print()
 
+    if exitcode in [ "BOTH" ] :
+        # envoi du fichier bolc
+        # Pour déposer sur le bolc par sftp, il faut rajouter une 1e colonne contenant le N° du don
+        # - si le PC existe déjà dans le bolc, on peut laisser une valeur vide
+        # - sinon l'import échouera si le N° de don est vide
+        # Le nom de fichier doit être comme   GR-PORTABLE-date.csv , sinon l'import bolc l'ignore 
+        print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
+        code=TransfertBolc(filebolcimport)
+        print()
 
-    print()
-
-
+#--------------------------------------------------
+# Envoie le fichier vers le Bolc
+#
+# INPUT
+#  filebolcimport:  nom  du fichier . S'il est vide, on le retrouve avec DataGet()
+# RETURN
+#  code  ( 0 si OK)
+#--------------------------------------------------
+def TransfertBolc(filebolcimport=""):
+    if filebolcimport == "":
+        filebolcimport=DataGet(TMPDISK,"-bolc.txt")
+    if filebolcimport == "" or not os.path.isfile(filebolcimport):
+        print(f"******** Fichier BOLC non trouvé : {filebolcimport} **************")
+        return
+        
     # envoi par sftp , en utilisant la commande curl
     fileconf="sftp.conf"
     cmd= f"{CURL} -k {P}fast{S} -T {filebolcimport} sftp://sftpemmaus.newmips.cloud:22222"
@@ -550,13 +633,13 @@ def MakeRapport(filename):
 
     CRLF="\r\n"
 
-    print("Creation du fichier: " , filename)
+    print("**Creation: " , filename)
 
     items=[
     f"======================= Rapport d'Audit  (Version={VERSION}) ================",   
-    f" IDENTIFIANT     : {IDENTIFIANT}  ",
-    f" DATE            : {auditdate}    ",
-    f" REALISE PAR     : {reconditionneur}  ",
+    f" IDENTIFIANT     : {Admin.ECID}  ",
+    f" DATE            : {Admin.auditdate}    ",
+    f" REALISE PAR     : {Admin.benevole}  ",
     f"=================================================================================",
     f"",
     f"--------------------------- Informations (les tailles Ram/Disque sont en GB) ------------------"
@@ -572,13 +655,13 @@ def MakeRapport(filename):
     items=[
     f"",
     f"--------------------------- Notes -----------------------------",
-    f" Note Brute : {notebrut} " ,
-    f" Note Nette : {notenet} ",
+    f" Note Brute : {Admin.notebrut} " ,
+    f" Note Nette : {Admin.notenet} ",
     f"",
-    f" Categorie  : {categorie}",
+    f" Categorie  : {Admin.categorie}",
     f"",
-    f"--------------------------- Remarques -----------------------------",
-    remarques
+    f"--------------------------- Observations -----------------------------",
+    Admin.observations
     ]
 
     txt3=CRLF.join(items) + CRLF
@@ -587,6 +670,30 @@ def MakeRapport(filename):
         f.write(txt1)
         f.write(txt2)
         f.write(txt3)
+
+#--------------------------------------------------
+# Genere la ficher achat
+# Utilisation d'un squelette rtf , dans lequel on fait des substitutions
+#
+# INPUT
+#  filename:  nom complet du fichier resultat
+#--------------------------------------------------
+def MakeFicheAchat(filename):
+
+    template=os.path.join("modeles","ficheachat.rtf")
+    with open(template,"r") as f:
+        txt=f.read()
+
+    txt=txt.replace("LEMAT", f'{infos["Marque"]} {infos["Modele"]}' )
+    txt=txt.replace("LIDEC",Admin.ECID)
+    txt=txt.replace("LESN",infos["NumeroSerie"])
+    txt=txt.replace("LAMARK",infos["Marque"])
+    txt=txt.replace("LACAT",Admin.categorie)
+
+    with open(filename,"w") as f:
+        f.write(txt)
+
+
 
 #--------------------------------------------------
 # Genere les mini fiches
@@ -598,7 +705,7 @@ def MakeRapport(filename):
 #--------------------------------------------------
 def MakeFiches(filesmartphone , filedouchette ):
 
-    print("Creation des fichiers: " ,filesmartphone ,  filedouchette)
+    print("**Creation: " ,filesmartphone ,  filedouchette)
 
     # taille de police
     small=9
@@ -607,7 +714,7 @@ def MakeFiches(filesmartphone , filedouchette ):
     date= datetime.datetime.now().strftime("%Y/%m/%d")
     # liste des items à mettre dans la fiche
     items=[
-            (big,   "ID:",   IDENTIFIANT),
+            (big,   "ID:",   Admin.ECID),
             (small, "DATE:",        date  ),
             (small, "MARQUE:",        infos["Marque"]  ),
             (small, "MODELE:",         infos["Modele"]  ),
@@ -618,25 +725,24 @@ def MakeFiches(filesmartphone , filedouchette ):
             (small, "CPU:",           f'{infos["Processeur"]}'  ),
             (small ,"CPUMARK:",       f'{infos["CPUMARK"]}'  ),
             (small, "BATTERIE:",      f'{infos["Batterie"]}'  ),
-            (big,   "CAT:",     categorie ),
+            (big,   "CAT:",            Admin.categorie ),
             (small, ""            ,  ""),
             (small, "OBSERVATIONS:",  ""),
-            (small, "",remarques)
+            (small, "",                 Admin.observations)
             ]
 
     #------------------------  avec qrcode format smarphone
     # le contenu sera interpétré par un script coté Salesforce . Donc format simple
     # texte du qrcode
-    qrcodeitems= [IDENTIFIANT , infos["NumeroSerie"] , categorie , infos["Marque"], infos["Modele"] ] 
+    qrcodeitems= [Admin.ECID , infos["NumeroSerie"] , Admin.categorie , infos["Marque"], infos["Modele"] ] 
     txtqrcode = "#".join( qrcodeitems )  #  IDENTIFIANT#NumeroSerie#Marque#Modele
 
     MakeRTF( items, txtqrcode ,filesmartphone ,TMPDISK )
 
     #------------------------  avec qrcode format douchette
     # le contenu correspond exactement aux champs coté database Salesforce . Donc formatage hyper complexe
-    tmpcat=categorie
-    if categorie == "Premium" : tmpcat = f"Ordinateur - PREMIUM"
-    else:                       tmpcat = f"Ordinateur - Catégorie {categorie}"
+    if Admin.categorie == "Premium" : tmpcat = f"Ordinateur - PREMIUM"
+    else:                           tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
 
     patterns={ "Dell" : "Dell",  "Hewlett" : "HP"  , "ASUSTeK" : "Asus" , "Packard" : "Packard Bell" , "Essentiel" : "Essentiel B" , "Terra" : "Terra Mobile" , "Apple" : "Apple Mac"  }
     tmpmarque=infos["Marque"]
@@ -647,7 +753,7 @@ def MakeFiches(filesmartphone , filedouchette ):
             break
 
     #catégorie + tabulation + tabulation + tabulation + tabulation + tabulation + tabulation + tabulation + marque + tabulation + tabulation + modèle + tabulation + tabulation + Identiant Emmaus-Connect + tabulation + numéro de série
-    txtqrcode=f"{tmpcat}\t\t\t\t\t\t\t{tmpmarque}\t\t{infos['Modele']}\t\t{IDENTIFIANT}\t{infos['NumeroSerie']}"
+    txtqrcode=f"{tmpcat}\t\t\t\t\t\t\t{tmpmarque}\t\t{infos['Modele']}\t\t{Admin.ECID}\t{infos['NumeroSerie']}"
     MakeRTF( items, txtqrcode ,filedouchette, TMPDISK )
 
 
@@ -668,11 +774,11 @@ def MakeBolc(filename):
     infosystem="Linux: " + infos["Systeme"]
 
     items=    [
-    idrecond,                   # identifiant du  matériel chez le reconditionneur
-    IDENTIFIANT,                # identifiant EmmausEC
+    Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
+    Admin.ECID,                # identifiant EmmausEC
     infos["Type"],              # type de matériel ( Portable , UC )
-    categorie,                  # categorie  A B C D Premium INVENDABLE    
-    bolcstatut,                 # Prêt à vendre, En reconditionnement ...
+    Admin.categorie,            # categorie  A B C D Premium INVENDABLE    
+    Admin.bolcstatut,           # Prêt à vendre, En reconditionnement ...
     "",                         # commentaire statut . 
     infos["Marque"],            # Marque: HP , Lenovo ...
     "",                         # Constructeur
@@ -680,7 +786,7 @@ def MakeBolc(filename):
     infos["Modele"],            # Modele ...
     infos["Batterie"],          # % de batterie residuel ...
     "",                         # Date de vente
-    remarques,                  # Remarques
+    Admin.observations,         # Observations
     infos["NumeroSerie"],       # Numero de serie
     infos["Processeur"],        # Type de Processeur
     infos["DisqueType"],        # Type de disque HDD/SSD
@@ -695,13 +801,13 @@ def MakeBolc(filename):
     infos["NoteEsthetique"],    # Pondération esthetique
     infos["CPUMARK"],           # Indice processeur
     "",                         # Autonomie batterie (mn)
-    reconditionneur,            # Nom du reconditionneur
+    Admin.benevole,             # Nom du benevole
     bolcdate,                   # date de l'audit
     infosystem,                 # Commentaire sur le reconditionnement : on y met l'OS cible
     "",                         # nature des dépenses
     "",                         # cout total
     "",                         # lien url
-    origine                     # Origine du reconditionnement: utilisation diverse selon les sites
+    Admin.origine               # Origine du reconditionnement: utilisation diverse selon les sites
     ]
 
     # Eviter certains caractères incompatibles avec csv
@@ -711,11 +817,146 @@ def MakeBolc(filename):
 
     txt=";".join(items)
 
-    print("Creation du fichier: " , filename)
+    print("**Creation: " , filename)
     # newline="" est indispensable sous windows pour eviter que \n devienne CRLF
     with open(filename,"w",newline="") as f:
         f.write(txt + "\r\n")
                          
+#===========================================================
+# Gestion / saisie de l'identifiant ECID
+# Il est mémorisé dans un fichier local
+# 
+# Ecid().Get()  renvoie la valeur mémorisée
+#  - saisie si le fichier local n'existe pas  ( et dans ce cas crée le fichier local)
+#  - abort si on saisie une valeur vide#
+# Ecid().Init(value)  permet de mémoriser l'ECID s'il est a été passé en paramètres
+# Ecid().Reset()  détruit le fichier local
+#==========================================================
+class Ecid():
+
+    def __init__(self):
+        self.idfile=os.path.join(TMPDISK,"-ecid.txt")
+        self.regexp=r"^[A-Z]{2}(PC|TA)[0-9]{2}-[0-9]{4}$"
+
+    def Save(self,value):
+        with open(self.idfile,"w") as f:
+            f.write(value)
+
+    def Get(self):
+        if os.path.isfile(self.idfile):
+            with open(self.idfile,"r") as f:
+                value=f.read()
+        else:
+            value=self.Input("")
+
+        # Pour les tests unitaires...
+        TestsUnitaires(value)
+        TestsUnitaires("ZZTEST")
+
+        return value
+
+    def Init(self,value):
+        self.Input(value)
+
+    def Reset(self):
+        if os.path.isfile(self.idfile) :  os.remove(self.idfile)        
+
+    def Input(self,value):
+        while not re.match( self.regexp , value):
+            if value != "":
+                msg=f"IDENTIFIANT emmaus incorrect: {value}"
+            else:
+                msg=""
+            value=Zinputbox( "SAISIE IDENTIFIANT" , msg, "Entrer l'identifiant (exemple: GRPC25-9999) "  , value )
+            if value == "" : break
+
+        if value == "" : sys.exit()  
+        self.Save(value)
+        return value
+
+            
+    
+
+
+
+
+#==============================================================================
+# Procedure d'Audit
+#
+#==============================================================================
+def ProcessAudit(mini=False,xfer=False):
+
+    global infos # TRES important !
+
+    Admin.ECID = Ecid().Get()
+
+
+
+
+
+    # Audit du système et extraction des données
+    infos=AuditMe()
+
+
+
+    # Si le materiel est declaré comme tablette, on force le type
+    if len(Admin.ECID) > 4 and Admin.ECID[2:4] == "TA":
+        infos["Type"]= "Tablette"
+
+    #print(infos)
+
+    # Recherche du CPUmark dans le fichier csv
+    #infos["Processeur"]= "13th Gen Intel (RR) Core i5-3439Y @ 1.50GHz"  #### TEST
+    #infos["Processeur"]= "13th Gen Intel (R) Core i5-3439Y @ 1.50GHz"  #### TEST
+    print(f"\n----------------- Recherche du processeur dans {CSVCPU} ----------------------")
+    cpumark=FindCPUMARK(CSVCPU,infos["Processeur"] )
+
+    # Saisie d'infos complémentaires, y compris le cpumark si pas trouvé
+    print("\n------------ Saisie manuelle d'informations --------------------")
+    ManualTechInfos(infos,cpumark)
+
+    print("\n----------------- Infos (tailles en GB) ----------------------\n")
+    for key,value in infos.items():
+        print(f"{key:<20}: {value}")
+    #print(json.dumps( infos, sort_keys=False, indent=4))
+
+
+    # Sasie des infos manuelles
+    result=ManualAdminInfosIHM("Saisie Informations")
+    # si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
+    if "OK" not in result or result["OK"] == "" : return 
+
+    #print(result)
+
+    Admin.benevole=result["benevole"]
+    Admin.observations=result["observations"]
+    Admin.bolcstatut=result["bolcstatut"]
+    Admin.idrecond=result["idrecond"]
+    Admin.origine=result["origine"]
+    Admin.iddon=result["iddon"]
+
+
+
+    print("\n----------------- Calcul des notes ----------------------")
+    sectionnote="#NOTE-" + OSTARGET.upper() 
+    Admin.notebrut=ComputeNote( infos, CSVREGLES, sectionnote,Admin.txtnotes )
+    Admin.notenet=ComputeNoteModif( infos, CSVREGLES, "#MODIF" , Admin.txtnotes, Admin.notebrut )
+
+    print( "\n".join(Admin.txtnotes)  )
+
+    print(f"\nNote finale={Admin.notenet}")
+
+    Admin.categorie=ComputeCategorie( CSVREGLES,Admin.notenet)
+    print(f"Categorie={Admin.categorie}")
+
+    # si Mini Audit , pas d'envoi ....
+    if mini : return
+
+
+    print("\n----------------- Création et envoi des fichiers vers audits.emmaus-connect.org  et Bolc ----------------------")
+    Admin.auditdate= datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    MakeSendFiles(xfer)
 
 #=============================== Main ==============================
 
@@ -732,6 +973,9 @@ try:
 except:
     print()
 
+# Se positionne sur le drive/directory du script principal
+ChdirScript()
+
 # Test interne désactivé
 cpulist=[ "Intel (R) Core(TM)      i5-6200U CPU @ 2.30GHZ  @{Name=bidule}" ,   " AMD 3456 @  2.30GHZ      with double option" ]
 cpulist=[]  # desactive le test
@@ -742,103 +986,22 @@ if len(cpulist) > 0:
         print()
     sys.exit()
 
-# Vérifier l'identifiant Emmaus passé en paramètre
-if len(sys.argv) > 1:
-    IDENTIFIANT=sys.argv[1]
-    nopc=False
-else:
-    IDENTIFIANT =""
-    nopc=True
 
 
-# Contrôle de l'identifiant, et resaisie éventuelle
-#regexp=r"^[A-Z]{2}(PC|TA)[0-9]{2}-[0-9]{4}$"
-#if not re.match( regexp , IDENTIFIANT):
-#    print( "IDENTIFIANT emmaus incorrect",IDENTIFIANT)
-#    IDENTIFIANT=InputValue( "Entrer l'identifiant (exemple: GRPC25-9999) ? " , [] , regexp )
+if __name__ == '__main__':
+    
+    # Vérifier l'identifiant Emmaus passé en paramètre
+    if len(sys.argv) > 1:
+        Ecid().Init(sys.argv[1])
+        nopc=False
+    else:
+        nopc=True
 
-# Contrôle de l'identifiant, et resaisie éventuelle
-regexp=r"^[A-Z]{2}(PC|TA)[0-9]{2}-[0-9]{4}$"
-while not re.match( regexp , IDENTIFIANT):
-    msg=f"IDENTIFIANT emmaus incorrect: {IDENTIFIANT}"
-    IDENTIFIANT=Zinputbox( "SAISIE IDENTIFIANT" , msg, "Entrer l'identifiant (exemple: GRPC25-9999) "  , IDENTIFIANT )
-    if IDENTIFIANT == "" : break
-
-if IDENTIFIANT == "" : sys.exit()  
-
-# Pour les tests unitaires...
-TestsUnitaires(IDENTIFIANT)
-TestsUnitaires("ZZPCTEST")
-
-
-# Audit du système et extraction des données
-infos=AuditMe()
-
-
-# Si le materiel est declaré comme tablette, on force le type
-if len(IDENTIFIANT) > 4 and IDENTIFIANT[2:4] == "TA":
-    infos["Type"]= "Tablette"
-
-#print(infos)
-
-# Recherche du CPUmark dans le fichier csv
-#infos["Processeur"]= "13th Gen Intel (RR) Core i5-3439Y @ 1.50GHz"  #### TEST
-#infos["Processeur"]= "13th Gen Intel (R) Core i5-3439Y @ 1.50GHz"  #### TEST
-print(f"\n----------------- Recherche du processeur dans {CSVCPU} ----------------------")
-cpumark=FindCPUMARK(CSVCPU,infos["Processeur"] )
-
-# Saisie d'infos complémentaires, y compris le cpumark si pas trouvé
-print("\n------------ Saisie manuelle d'informations --------------------")
-ManualTechInfos(infos,cpumark)
-
-print("\n----------------- Infos (tailles en GB) ----------------------\n")
-for key,value in infos.items():
-    print(f"{key:<20}: {value}")
-#print(json.dumps( infos, sort_keys=False, indent=4))
-
-
-
-result=ManualAdminInfosIHM("Saisie Informations")
-# si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
-if "OK" not in result or result["OK"] == "" : sys.exit() 
-
-#print(result)
-
-reconditionneur=result["reconditionneur"]
-remarques=result["remarques"]
-bolcstatut=result["bolcstatut"]
-idrecond=result["idrecond"]
-origine=result["origine"]
-don=result["don"]
-
-
-
-print("\n----------------- Calcul des notes ----------------------")
-sectionnote="#NOTE-" + OSTARGET.upper() 
-notebrut=ComputeNote( infos, CSVREGLES, sectionnote )
-notenet=ComputeNoteModif( infos, CSVREGLES, "#MODIF" , notebrut )
-
-print( "\n".join(txtnotes)  )
-
-print(f"\nNote finale={notenet}")
-
-categorie=ComputeCategorie( CSVREGLES,notenet)
-print(f"Categorie={categorie}")
-
-
-
-
-
-
-
-print("\n----------------- Création et envoi des fichiers vers audits.emmaus-connect.org  et Bolc ----------------------")
-auditdate= datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
-MakeSendFiles()
-
-# Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
-if nopc:
-    code=InputValue("\n\n*** Fini ! ***  Tapez RETURN pour sortir ? ")
+    ProcessAudit(mini=False)
+    
+    # Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
+    if nopc:
+        Zinputbox("**FIN**" , "Fin de l'audit !                              ")
 
 
 

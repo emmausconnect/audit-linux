@@ -16,12 +16,17 @@ TMPSCANFILE=TMPDISK+ "scan-linux.txt"           # fichier d'export de la command
 FILESCAN="scan-linux.txt"                        # fichier contenant le scan système qu'on copie sur drop.tf
 OSTARGET="Linux"                                # Utilisé pour trouver kes règles dans regles.csv , et comme suffixe pour DecouverteMonPC
      
+# directory separateur
+DIRSEP="/"
+
 # Curl prefix/suffix
 P="$"
 S=""
 CURL="curl"
        
-inxidata={}
+# Variables globales
+inxidata={}  
+infos={}  # donnees technique issues du scan systeme
 
 #------------------------------------------
 # Lance les outils système de scan
@@ -42,8 +47,10 @@ def AuditMe():
 
     print( f"===================== Décodage des infos système depuis {TMPSCANFILE} ===============" )
     DecodeInxi( TMPSCANFILE )
-    infos=AnalyzeInxi()
+    AnalyzeInxi()
     return infos
+
+
 
 
 #------------------------------------------
@@ -193,6 +200,8 @@ def InxiItems( txt ) :
 #  liste { clé , valeur } 
 #-----------------------------------------------------------
 def AnalyzeInxi():
+    global infos
+
     infos={}
 
     # Conversion de type : le BOLC ignore ce qui n'est pas UC / Portable'
@@ -288,7 +297,7 @@ def AnalyzeInxi():
     infos["DisqueID"]=diskid
 
     infos["DisqueType"] = DetectDiskType( diskid )
-    return infos
+
 
 #----------------------------------------------------------------------
 # Detecte si un disque est HDD ou SSD
@@ -325,7 +334,7 @@ def Copy2Desktop(files):
 
     BUREAU=""
     for b in [ "Bureau" ,"Desktop"]:
-        bname=os.environ["HOME"] + "/" + b
+        bname=os.path.join(  os.environ["HOME"] , b )
         if os.path.isdir(bname):  BUREAU=bname
 
     if BUREAU != "" :
@@ -338,6 +347,8 @@ def Copy2Desktop(files):
         return False
 
     return True
+
+
 
 def CopyFile2File( src, dst):
     os.system( f"cp {src} {dst}" )

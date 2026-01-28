@@ -63,13 +63,26 @@ def Ztext(hostbox,title):
         hostbox.pack_start(label, True, False, 0)
         return label
 
-# future use...
-class Zcell():
+#---------------------------------------------------------
+# Grid and Cell in a Grid
+#---------------------------------------------------------
+def Zgrid(hostbox):
+    grid= Gtk.Grid()
+    hostbox.pack_start(grid, True, False, 0)
+    return grid
 
-    def __init__(self,hostbox,col,row,width,height):
-        
-        self.vbox=Gtk.Box()
-        hostbox.attach(self.vbox,col,row,width,height)
+def Zvcell(grid,x,y,spacing=5,border=5):
+    box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=spacing)
+    box.set_border_width(border)
+    grid.attach(box,x,y,1,1)
+    return box
+
+def Zhcell(grid,x,y,spacing=5,border=5):
+    box=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=spacing)
+    box.set_border_width(border)
+    grid.attach(box,x,y,1,1)
+    return box
+
 
 #========================== Objets avec une valeur  ========================
 # ces objets ont un "id" , une valeur "value"  et sont rattachés à un "owner" de type Zdialog
@@ -92,10 +105,12 @@ class Zcell():
 #  - on associe une classe CSS "button-ID" au bouton
 #  - on crée une CSS qui définit la couleur pour cette classe
 # avant, il existait modify_bg() , mais ça devait être trop simple ...
+#
+# !!! default=True n'est pas opérationnel
 #---------------------------------------------------
 class Zbutton():
 
-    def __init__(self,owner,hostbox,id,title,color="grey",action=None):
+    def __init__(self,owner,hostbox,id,title,color="grey",action=None,default=False):
         self.owner=owner
         self.owner.Register(id,self)
 
@@ -106,11 +121,20 @@ class Zbutton():
         self.button = Gtk.Button(label=title)
 
         # Associe une classe CSS au bouton, et ajoute cette classe dans la feuille de style
-        self.button.get_style_context().add_class(f"button-{id}")  
-        self.apply_css(id,color)
+        newclass=f"button-{id}"
+        self.button.get_style_context().add_class(newclass)  
+        self.apply_css(newclass,color)
 
         self.button.connect("clicked", self.on_button_clicked)
+        # bouton par defaut
+        if default : 
+            self.button.set_can_default(True)
+            self.owner.root.set_default(self.button)  
+ 
         hostbox.pack_start(self.button, True, False, 0)
+
+    def Setvalue(self,initvalue):
+        return
 
     def Getvalue(self):
         return self.value
@@ -119,15 +143,15 @@ class Zbutton():
     def on_button_clicked(self, widget):
         self.value=self.id
         if self.action is None:
-            self.owner.Exit()
+            self.owner.Exit(self.id)
         else:
             self.action(self.owner,self.id)
 
     # Créer et appliquer la CSS 
-    def apply_css(self,id,color):
+    def apply_css(self,newclass,color):
  
         css = f"""
-.button-{id} {{
+.{newclass} {{
             background-color: {color};
             border: 2px solid black;
 }}
@@ -144,9 +168,10 @@ class Zbutton():
 #---------------------------------------------------
 class Zentry():
 
-    def __init__(self,owner, hostbox,id,titre,position,initvalue=""):
+    def __init__(self,owner, hostbox,id,titre,position,initvalue="",focus=False):
         self.id=id
-        owner.Register(id,self)
+        self.owner=owner
+        self.owner.Register(id,self)
 
         if position == "up" :
             position=Gtk.Orientation.VERTICAL
@@ -158,31 +183,41 @@ class Zentry():
         label=Gtk.Label(label=titre)
         label.set_justify(Gtk.Justification.LEFT)
         self.entry=Gtk.Entry()
-        self.entry.set_text(initvalue)
+        self.owner.initvalues[id]=initvalue
+
+        if focus : self.entry.grab_focus()
+
         box.pack_start(label, False, False, 0)
         box.pack_start(self.entry, False, False, 0)
          
+    def Setvalue(self,initvalue):
+        self.entry.set_text(initvalue)
+        
     def Getvalue(self):
         return self.entry.get_text()
 
 #---------------------------------------------------
 # Check button avec un label , et un contenu initial
-#
+# Si initvalue != ""  le bouton est checké
 #---------------------------------------------------
 class Zcheck():
 
     def __init__(self,owner, hostbox,id,titre,initvalue=""):
         self.id=id
-        owner.Register(id,self)
-
+        self.owner=owner
+        self.owner.Register(id,self)
+        
         self.check=Gtk.CheckButton(label=titre)
         self.check.connect("toggled", self.on_button_toggled, id)
         hostbox.pack_start(self.check, True, False, 0)
+        self.owner.initvalues[id]=initvalue
+
+    def Setvalue(self,initvalue):
         if initvalue=="":
             self.check.set_active(False)
         else:
-            self.check.set_active(True)    
-
+            self.check.set_active(True)  
+        
     def Getvalue(self):
         s= self.check.get_active()
         if s : return "on"
@@ -191,20 +226,71 @@ class Zcheck():
     def on_button_toggled(self, widget,id):
         xxx=True
 
+#---------------------------------------------------
+# Radio button avec un label 
+#
+# Ils se partagent un même résultat owner.groupsvalue[group] , qui contient l'ID du bouton sélécté
+# On ne fait Register que sur le premier bouton, et on fait utilise group  comme id
+# ( donc la valeur de retour du Zdialog contient  result[group] = id du radio selectionné)
+#
+# Si initvalue == id  le bouton est checké 
+# (permet de tous leur mettre result[group] comme valeur initiale)
+#
+#---------------------------------------------------
+class Zradio():
+
+    def __init__(self,owner, hostbox,id,titre,initvalue,group):
+        self.id=id
+        self.owner=owner
+        self.group=group
+
+
+        if not group in owner.groups:
+            owner.groups[group]=None  # None pour initialiser le group
+            owner.groupsvalue[group]=""
+            owner.Register(group,self)  # par defaut on enregistre le 1er, mais après on enregistre celui dont id=initvalue
+            owner.initvalues[self.group]=id
+
+        self.radio=Gtk.RadioButton(group=owner.groups[group],label=titre)
+        self.radio.connect("toggled", self.on_button_toggled, id)
+        hostbox.pack_start(self.radio, True, False, 0)
+        if id == initvalue: 
+            self.owner.initvalues[self.group]=initvalue
+            self.owner.Register(group,self)  # on enregistre celle dont  id=initvalue
+        # sera utilisé par le button suivant
+        owner.groups[group]=self.radio 
+
+    def Setvalue(self,initvalue):
+        if initvalue==self.id:
+            self.radio.set_active(True)
+        else:
+            self.radio.set_active(False)  
+ 
+    def Getvalue(self):
+        return self.owner.groupsvalue[self.group] 
+
+    def on_button_toggled(self, widget,id):
+        s= self.radio.get_active()
+        if s : self.owner.groupsvalue[self.group] = id
+
 
 #---------------------------------------------------
 # Liste de choix , avec un titre 
 # - "items" : tableau des valeurs possibles
-# - default : indice de l'élément pré-sélectionné ( commence à 0 !! )  . Si -1, pas de présélection
+# - initvalue : nom de l'élément pré-sélectionné ( doit être dans items) Si pas trouvé, pas de présélection
 #
 # Sa valeur est le texte sélectionné
 #---------------------------------------------------
 class Zlistbox( ):
 
-    def __init__(self,owner,hostbox, id,title,items,default=-1):
+    def __init__(self,owner,hostbox, id,title,items,initvalue=""):
 
-        owner.Register(id,self)
+        self.id=id
+        self.owner=owner
+        self.owner.Register(id,self)
 
+
+        self.items=items
         self.listbox = Gtk.ListBox()
         self.value=""
         
@@ -218,6 +304,8 @@ class Zlistbox( ):
 
         self.listbox.connect("row-activated", self.on_item_selected)
 
+        self.owner.initvalues[self.id]=initvalue
+
        # Création d'un cadre autour de la ListBox  
         frame = Gtk.Frame(label=title)
         frame.set_border_width(1)  # Largeur de la bordure  
@@ -228,10 +316,14 @@ class Zlistbox( ):
         # le 1e True répartit les widgets sur l'espace disponible , le 2e True aggrandit les widget
         hostbox.pack_start(frame,True,False,0)
 
+
+
+    def Setvalue(self,initvalue):
         # Sélectionner l'élément par défaut  
-        if default >= 0:
-            self.listbox.select_row(self.listbox.get_row_at_index(default))
-            self.value=items[default]
+        for index,value in enumerate(self.items):
+            if value==initvalue:
+                self.listbox.select_row(self.listbox.get_row_at_index(index))
+                self.value=value
 
     def Getvalue(self):
         return self.value
@@ -266,8 +358,15 @@ class Zdialog():
 
         self.values={}
         self.widgets={}
+        self.groups={}  # pour les radiobuttons
+        self.groupsvalue={}  # pour stocker la valeur d'un groupe de radiobuttons
+        self.initvalues={}   # stocker les valeurs initiales des widgets
         #self.set_default_size(200,2500)
         #self.set_position( Gtk.WindowPosition.CENTER_ALWAYS )
+
+        # Prepositionner une valeur #QUIT (cas ou on sort par la case de fermeture)
+        self.values["#QUIT"]="#QUIT"
+        self.exitcode="#QUIT"
 
         # creer la fenetre principale ou une sous-boite non-modale
         if belongsto is None:
@@ -297,14 +396,18 @@ class Zdialog():
         values={}
         for id,widget in self.widgets.items():
             values[id] = widget.Getvalue()
+        self.values["#QUIT"]=""
         return values
 
     #--------------------------------------------------------------------------
     # Appelé par un bouton, pour provoquer la sortie, et récupérer  les données
     #--------------------------------------------------------------------------
-    def Exit(self):
+    def Exit(self,exitcode):
         # sauver les valeurs avant de tout détruire
         self.values=self.Getvalues()
+        self.exitcode=exitcode
+
+
         # sans ça, la fenêtre reste jusqu'à la fin du programme python ...
         # note: ça supprime la fenêtre graphique, mais pas l'objet python...
         self.root.destroy() 
@@ -316,6 +419,11 @@ class Zdialog():
     # renvoie la liste des valeurs 
     #--------------------------------------------------------------------------
     def Run(self):
+        # initialiser les widgets
+        for id,initvalue in self.initvalues.items():
+            if id in self.widgets:
+                self.widgets[id].Setvalue( initvalue )
+
         if not self.modeless:
             self.root.connect("destroy", Gtk.main_quit)
             self.root.show_all()

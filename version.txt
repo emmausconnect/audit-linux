@@ -1,4 +1,4 @@
-VERSION=2.2.0
+VERSION=2.3.0
 #------------- files ----------------------
 audit.py
 audit.sh
@@ -16,6 +16,8 @@ version.txt
 changelog.txt
 DecouverteMonPC-Linux
 doc
+modeles
+
 
 
 

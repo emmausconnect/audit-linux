@@ -1,3 +1,14 @@
+-------------------- V2.3.0  25 Mai 2025 ------------------------------- -
+Fonctions:
+    Génération d'une "FicheAchat.rtf" , suivant le modèle Jean-Jacques
+    Renommage "Remarques" en "Observations"
+    Documentation: la partie "concepts de base" a été séparée dans un document à part (commun Windows/Linux)
+
+Interne:
+    Purge de répertoire, pour éviter une prolifération de fichiers Bolc
+    Mémorisation du nom de fichier Bolc, pour pouvoir relancer le transfert ultérieurement
+    IHM: changement gestion valeurs initiales
+    
 -------------------- V2.2.0  27 avril 2025 --------------------------------
 Découplage des écrans: Infos Techniques / Infos Administratives
 ( Ca passe mieux sur des écrans à faible taille X/Y )

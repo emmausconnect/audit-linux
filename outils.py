@@ -37,6 +37,16 @@ SerialNumbers="""
 """
 
 #----------------------------------------------------------
+# Se positionne sur le drive/dir du script
+def ChdirScript():
+    file=sys.argv[0]
+    mydir=os.path.dirname(file)
+    if mydir == "" : mydir= "."  # necessaire si script sans nom de repertoire
+    os.chdir(mydir)
+
+#----------------------------------------------------------
+#----------------------------------------------------------
+#----------------------------------------------------------
 # Decode un texte de la forme 45.78 GiB ou 2400 MB
 # renvoie le nombre converti en GB
 #
@@ -190,6 +200,7 @@ def TestsUnitaires(txt):
       items=h.split("=",2)
       if len(items) == 3  and items[0] == indice:  
         os.environ[items[1]]=items[2]
+
 
 
     
