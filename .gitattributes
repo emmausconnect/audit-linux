@@ -1,0 +1,9 @@
+# Default: text files use LF in repo and working tree
+# * text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.txt  text eol=lf
+*.png binary
+*.jpg binary
+*.zip binary
+*.pdf binary
