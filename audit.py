@@ -161,118 +161,118 @@ def FindCPUMARK(cpufile,cpuname ):
 # Saisie des infos techniques complémentaires
 #
 # Si cpumark est vide, demande de le saisir
-#
-# Met à jour infos, reconditionneur, remarques
+# Notes Technique/Esthetique
+# Type de deisque
 #
 # INPUT
 #  infos: liste des infos utiles
 #  cpumark: s'il est vide, on le demandera
 # OUTPUT
-#  mise à jour de infos , et variables globales: reconditionneur, remarques
+#  mise à jour de infos 
 #-----------------------------------------------------------------
 def ManualTechInfos(infos,cpumark):
 
-    # Obtention du disque, et stockage de la taille dans les valeurs SSD ou HDD
     disktype=infos["DisqueType"] 
-    print("Type de disque detecté:", disktype)
+    #disktype=""
+    #cpumark=""
 
-    if disktype == "":
-        print( f"\nPour savoir si le disque est un HDD ou un SSD, vous pouvez chercher sa référence sur Internet: {infos['DisqueRef']}" )
-        disktype=InputValue("Le disque est il de type HDD [ o / n ] ? ", ["o","n"] )
-        if disktype == "o" : disktype="HHD"
-        else: disktype="SSD"
+    while True:
 
-    infos["DisqueType"]=disktype
+
+
+        dialog=Zdialog("Informations Techniques",10,10)
+        vbox=dialog.area
+
+        # Obtention du disque, et stockage de la taille dans les valeurs SSD ou HDD
+        boxdisk=Zvbox(vbox,2,2,"Disque")
+
+
+
+        if disktype == "":
+            Ztext(boxdisk,"Type de disque non détecté !")
+            msgdisk= f"Pour savoir si le disque est un HDD ou un SSD, vous pouvez chercher sa référence sur Internet: {infos['DisqueRef']}"
+            Ztext(boxdisk,msgdisk)
+            Zlistbox(dialog, boxdisk, "DISK", "Type de disque", [ "HDD", "SSD" ] ,0 )
+        else:
+            msgdisk= f"Type de disque detecté: {disktype}"
+            Ztext(boxdisk,msgdisk)
+
+
+        # saisie du cpumark, si pas trouvé
+        boxcpu=Zvbox(vbox,5,5,"CPU")
+        Ztext(boxcpu,f'Type de CPU: {infos["Processeur"]}' )
+
+        msgcpu=""
+        if cpumark == "" :
+            msgcpu=f"Le nom de processeur n'a pas été trouvé dans le fichier local {CSVCPU}:"
+            msgcpu=msgcpu + "\nIl faut chercher son 'CPU mark' dans https://www.cpubenchmark.net/CPU_mega_page.html"
+            msgcpu=msgcpu+ "\nVous pouvez soit saisir manuellement le CPUmark, soit modifier le fichier csv et relancer l'audit"
+
+        Zentry(dialog, boxcpu, "CPUMARK", "Cpumark: ","r",cpumark)
+
+        # ajustement note
+        boxdelta = Zhbox( vbox,5 ,5,"Ajustement Note" )
+        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] ,2) 
+        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , 1)
+
+        # boutons
+        boxactions= Zhbox(vbox,0,0)
+        Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
+
+        # affiche le dialog, attend la sortie, et renvoie le résultat
+        out= dialog.Run()
+
+        # Traitement
+        ok=True
+
+        cpumark=out["CPUMARK"]
+        if not cpumark.isnumeric():
+            ok=False
+           
+        if ok : break
+
+    if "DISK" in out: 
+        disktype=out["DISK"]
+        infos["DisqueType"]=disktype
     #!!!! il est important que les clés SSD ou HDD contiennent la taille disque, car c'est ce qui est utilisé dans le calcul des regles
     infos[disktype]=infos["DisqueTaille"]
 
-    # saisir du cpumark, si pas trouvé
-    if cpumark == "" :
-        print(f"\nLe nom de processeur n'a pas été trouvé dans le fichier local {CSVCPU}:")
-        print("Il faut chercher son 'CPU mark' dans https://www.cpubenchmark.net/CPU_mega_page.html")
-        print("Vous pouvez soit saisir manuellement le CPUmark, soit modifier le fichier csv et relancer l'audit")
-        cpumark=InputValue("CPU Mark ? ",[], "" , True)
+    infos["NoteTechnique"]=int(out["NoteTechnique"])
+    infos["NoteEsthetique"]=int(out["NoteEsthetique"])
     infos["CPUMARK"]= cpumark
 
 
 
 
-#--------------------------------------------------------------
-# Saisie des infos administratives
-#
-# Si cpumark est vide, demande de le saisir
-#
-# Met à jour infos, reconditionneur, remarques
-#
-# INPUT
-#  infos: liste des infos utiles
-#  
-# OUTPUT
-#  mise à jour de infos , et variables globales: reconditionneur, remarques
-#-----------------------------------------------------------------
-def ManualAdminInfos(infos):
-    global reconditionneur,remarques,don, bolcstatut
-
-    # pondération
-    n=InputValue("Note Technique : saisir un entier entre   [-2 , 1] ( ou Return pour dire 0 ) ? ",[ "-2","-1","0","","1"] )  
-    if n == "" : n="0"
-    infos["NoteTechnique"]=int(n)
-
-    n= InputValue("Note Esthetique : saisir un entier entre [-1 , 1] ( ou Return pour dire 0 ) ? ",[ "-1","0","","1"] )   
-    if n == "" : n="0"
-    infos["NoteEsthetique"]= int(n)
-
-    # mise à jour de variables globales
-    reconditionneur=InputValue("Nom du Reconditionneur ? ",[] )
-    remarques=InputValue("Remarques ? " ,[] )
-
-    don=InputValue( "Si le PC n'est pas déjà déclaré dans le Bolc, il faut saisir le N° du don . Sinon faire RETURN\nN° du don ? ")
-
-    # Entree du statut
-    print("\n----------------- Statut de reconditionnement ----------------------")
-    txt="""
-    Entrer la lettre correspond au statut voulu
-      r => En reconditionnement
-      p => Prêt à vendre
-      a => En attente (de pièces)
-      h => HS
-    Statut ? """
-
-    code=InputValue( txt , [ "r" , "p" , "a" , "h", "" ] )
-    liststatut={ "r" : "En reconditionnement" , "p" : "Prêt à vendre" , "a" : "En attente" , "h": "HS" , "" : "" }
-    bolcstatut=liststatut[code]
 
 
 #===========================================================================
-# IHM de saisie des infos
+# IHM de saisie des infos administratives
 #
 #
 # Si on ferme la fenêtre avec la croix,on aura result["OK"]=""
 #===========================================================================
-def ManualAdminInfosIHM(title,margin=5,spacing=5):
+def ManualAdminInfosIHM(title,margin=2,spacing=2):
     # créer l'objet Zdialog
     dialog=Zdialog(title,margin,spacing)
     vbox=dialog.area
-
-    boxdelta = Zhbox( vbox,2 ,2,"Ajustement Note" )
-    Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] ,2) 
-    Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , 1)
 
     Zentry(dialog, vbox, "reconditionneur", "Nom Bénévole:","up")
     Zentry(dialog, vbox, "remarques", "Remarques:","up")
 
     Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,0)
 
-    boxadmin=Zvbox(vbox,2,2,"Infos administratives:")
+    boxadmin=Zvbox(vbox,5,2,"Informations administratives:")
     Ztext(boxadmin,"La manière dont ces infos sont gérées dépend du site ...\nSur certains sites, elles sont facultatives ou préchargées manuellement dans le Bolc avant reconditionnement")
-    Zentry(dialog, boxadmin, "idrecond" , "(PC venant d'un Reconditionneur PRO)\nID du PC chez le reconditionneur:","r")        
-    Zentry(dialog, boxadmin, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")   
+    hbox = Zhbox( boxadmin,2 ,0)
+    Zentry(dialog, hbox, "idrecond" , "(PC venant d'un Reconditionneur PRO)\nID du PC chez le reconditionneur:","r")        
+    Zentry(dialog, hbox, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")   
 
     boxbolc=Zvbox(vbox,2,2,"Transfert BOLC")
-    Ztext(boxbolc,"Si le PC n'a pas déjà été créé dans le Bolc, il faut fournir le N°du don auquel il est associé.\nSinon l'import échouera")
+    Ztext(boxbolc,"Si le PC n'a pas déjà été créé dans le Bolc, il faut fournir le N°du don auquel il est associé. Sinon l'import échouera")
     Zentry(dialog,boxbolc , "don", "N° du don:","r")  
 
-    boxactions= Zhbox(vbox,2,0)
+    boxactions= Zhbox(vbox,0,0)
     Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
 
     # affiche le dialog, attend la sortie, et renvoie le résultat
@@ -472,7 +472,7 @@ def MakeSendFiles():
 
     # Copie du rapport sur le Bureau et de DecouverteMonPC .  Le Bureau peut s'appeler Bureau ou Desktop
     print(f"\nCopie du rapport d'audit sur le Bureau")
-    code=Copy2Desktop( [ filerapport , DECOUVERTE ] )
+    code=Copy2Desktop( [ filerapport , filefiche, filedouchette, DECOUVERTE ] )
     if not code:
         print( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
 
@@ -797,22 +797,19 @@ for key,value in infos.items():
 #print(json.dumps( infos, sort_keys=False, indent=4))
 
 
-if not USEIHM:
-    ManualAdminInfos(infos)
-else:
-    result=ManualAdminInfosIHM("Saisie Informations")
-    # si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
-    if "OK" not in result or result["OK"] == "" : sys.exit() 
 
-    #print(result)
-    infos["NoteTechnique"]=int(result["NoteTechnique"])
-    infos["NoteEsthetique"]=int(result["NoteEsthetique"])
-    reconditionneur=result["reconditionneur"]
-    remarques=result["remarques"]
-    bolcstatut=result["bolcstatut"]
-    idrecond=result["idrecond"]
-    origine=result["origine"]
-    don=result["don"]
+result=ManualAdminInfosIHM("Saisie Informations")
+# si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
+if "OK" not in result or result["OK"] == "" : sys.exit() 
+
+#print(result)
+
+reconditionneur=result["reconditionneur"]
+remarques=result["remarques"]
+bolcstatut=result["bolcstatut"]
+idrecond=result["idrecond"]
+origine=result["origine"]
+don=result["don"]
 
 
 

@@ -31,7 +31,8 @@ Limitations:
 
   Au besoin, booter sur une clé LMDE6, et lancer l'audit depuis une autre clé
 
-  Sur d'autres Linux, inxi peut donner des résultats différents, ou il peut manquer des composants
+  Sur d'autres Linux, inxi peut donner des résultats différents, ou il peut manquer des packages : python3-qrcode
+  
 
 
 

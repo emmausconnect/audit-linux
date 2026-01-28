@@ -82,7 +82,10 @@ class Zcell():
 #==========================================================================
 
 #---------------------------------------------------
-# bouton qui provoque la fin du Zdialog
+# bouton qui provoque 
+# - la fin du Zdialog si action=None
+# - le lancement de action(owner,id) sinon
+#
 # - sa valeur finale est soit "" , soit son id s'il a été cliqué
 #
 # la technique pour changer la couleur est une usine à gaz, qui fait appel à une CSS
@@ -92,12 +95,14 @@ class Zcell():
 #---------------------------------------------------
 class Zbutton():
 
-    def __init__(self,owner,hostbox,id,title,color="grey"):
+    def __init__(self,owner,hostbox,id,title,color="grey",action=None):
         self.owner=owner
         self.owner.Register(id,self)
 
         self.value=""
         self.id=id
+        self.action=action
+
         self.button = Gtk.Button(label=title)
 
         # Associe une classe CSS au bouton, et ajoute cette classe dans la feuille de style
@@ -110,10 +115,13 @@ class Zbutton():
     def Getvalue(self):
         return self.value
 
-    # cliquer le bouton provoque la sortie
+    # cliquer le bouton provoque la sortie si action=None, ou lance cette action
     def on_button_clicked(self, widget):
         self.value=self.id
-        self.owner.Exit()
+        if self.action is None:
+            self.owner.Exit()
+        else:
+            self.action(self.owner,self.id)
 
     # Créer et appliquer la CSS 
     def apply_css(self,id,color):
@@ -156,6 +164,33 @@ class Zentry():
          
     def Getvalue(self):
         return self.entry.get_text()
+
+#---------------------------------------------------
+# Check button avec un label , et un contenu initial
+#
+#---------------------------------------------------
+class Zcheck():
+
+    def __init__(self,owner, hostbox,id,titre,initvalue=""):
+        self.id=id
+        owner.Register(id,self)
+
+        self.check=Gtk.CheckButton(label=titre)
+        self.check.connect("toggled", self.on_button_toggled, id)
+        hostbox.pack_start(self.check, True, False, 0)
+        if initvalue=="":
+            self.check.set_active(False)
+        else:
+            self.check.set_active(True)    
+
+    def Getvalue(self):
+        s= self.check.get_active()
+        if s : return "on"
+        else : return ""
+
+    def on_button_toggled(self, widget,id):
+        xxx=True
+
 
 #---------------------------------------------------
 # Liste de choix , avec un titre 
@@ -215,8 +250,10 @@ class Zlistbox( ):
 # On sort par 2 méthodes
 # - cliquer sur un bouton
 # - cliquer sur la croix : dans ce cas, toutes les valeurs existent mais sont vides
+#
+# Si belongsto est une Zdialog , alors la boite est modeless
 #================================================================
-class Zdialog(Gtk.Window):
+class Zdialog():
 
     #--------------------------------------------------------------------------
     # Initilisation
@@ -224,19 +261,29 @@ class Zdialog(Gtk.Window):
     # - margin: espace entre la fenêtre et la box 
     # - spacing: les widgets dans la box, seront espacés de "spacing"
     #--------------------------------------------------------------------------
-    def __init__(self,title,margin=50,spacing=10):
+    def __init__(self,title,margin=30,spacing=10,belongsto=None):
 
-        super().__init__(title=title)
 
         self.values={}
         self.widgets={}
         #self.set_default_size(200,2500)
-        self.set_position( Gtk.WindowPosition.CENTER_ALWAYS )
+        #self.set_position( Gtk.WindowPosition.CENTER_ALWAYS )
+
+        # creer la fenetre principale ou une sous-boite non-modale
+        if belongsto is None:
+            self.root= Gtk.Window(title=title)
+            self.modeless=False
+            self.drawzone=self.root
+        else:
+            self.root= Gtk.Dialog(title="My Dialog", transient_for=belongsto.root)
+            self.drawzone=self.root.get_content_area()
+            self.modeless=True
+
 
         self.area= Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=spacing)
         #vbox.set_margin_top(100) #vbox.set_margin_bottom(100) #vbox.set_margin_right(200) #vbox.set_margin_left(200)
         self.area.set_border_width(margin)
-        self.add(self.area)
+        self.drawzone.add(self.area)
 
     # appelé par chaque widget, pour que Zdialog soit capable d'enregistrer sa valeur au moment de sortir
     # initialise self.values[id]="" pour chaque widget
@@ -260,18 +307,22 @@ class Zdialog(Gtk.Window):
         self.values=self.Getvalues()
         # sans ça, la fenêtre reste jusqu'à la fin du programme python ...
         # note: ça supprime la fenêtre graphique, mais pas l'objet python...
-        self.destroy() 
+        self.root.destroy() 
         # provoque la sortie de Gtk.main()
-        Gtk.main_quit()
+        if not self.modeless: Gtk.main_quit()
 
     #--------------------------------------------------------------------------
     # Affichage du Zdialog, et attente de sortie
     # renvoie la liste des valeurs 
     #--------------------------------------------------------------------------
     def Run(self):
-        self.connect("destroy", Gtk.main_quit)
-        self.show_all()
-        Gtk.main()
+        if not self.modeless:
+            self.root.connect("destroy", Gtk.main_quit)
+            self.root.show_all()
+            Gtk.main()
+        else:
+            self.root.show_all()  
+  
         #print (self.values)
         return self.values
 

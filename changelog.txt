@@ -1,3 +1,13 @@
+-------------------- V2.2.0  27 avril 2025 --------------------------------
+Découplage des écrans: Infos Techniques / Infos Administratives
+( Ca passe mieux sur des écrans à faible taille X/Y )
+
+On peut modifier le CPUMARK détecté automatiquement
+
+Corrections dans le fichier des CPU
+
+Copie mini-fiche ( formats douchette+smartphone ) sur le Bureau [Suggestion C.Marvin]
+
 -------------------- V2.1.5  11 avril 2025 --------------------------------
 Le dépots des fichiers d'audit se fait désormais sur https://audits.emmaus-connect.org 
 
