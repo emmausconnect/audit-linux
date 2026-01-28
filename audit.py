@@ -122,24 +122,39 @@ def DataGet( dir, file ):
 #   Intel (R) Core(TM) i5-6200U CPU @ 2.30GHZ           Intel Core i5-6200U @ 2.30GHZ
 #   Intel Core i7-5600U                                 Intel Core i7-5600U @ 2.60GHz
 #   13th Gen Intel Core i7-1360P                        Intel Core i7-1360P 
+#   Intel Core i7 M 620                                 Intel Core i7-620M
+#
+#   AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G        AMD PRO A10-8730B   (nettoyer à partir de la virgule est utile mais pas suffisant à cause du R5 )
 #--------------------------------------------------------   
 def CleanCpuname(cpuname):
+
+    # à faire avant les autres
+    #cpuname=re.sub( r'[@][{]Name=[^}]*[}]' , "" , cpuname)  # truc tiré de l'auditJJ    supprimer @{Name=.......}
+    cpuname=re.sub( r'[@].*' , "" , cpuname)  # on retire à partir du @
+    cpuname=re.sub( r'[,].*' , "" , cpuname)  # on retire à partir de la virgule   AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G
 
     # Cas des cpu Intel
     if cpuname.find("Intel") > -1 :
         cpuname=re.sub( r'\(R\)' , "" , cpuname)   # supprimer (R)
         cpuname=re.sub( r'\(TM\)' , "" , cpuname)  # supprimer (TM)
         cpuname=re.sub( r'CPU ' , "" , cpuname)  # supprimer "CPU "
-        cpuname=re.sub( r'[0-9]+th Gen ' , "" , cpuname)  # supprimer "13th Gen "
+        cpuname=re.sub( r'[0-9]+th Gen ' , "" , cpuname , 0 , re.IGNORECASE  )  # supprimer "13th Gen , 13TH GEN"
+
 
     # Cas des cpu AMD
     if cpuname.find("AMD") > -1 :
         cpuname=re.sub( r' with .*$' , "" , cpuname)  # supprimer " with xxxxxxx" 
+        cpuname=re.sub( r' R5$' , "" , cpuname)       # supprimer le R5 final dans AMD PRO A10-8730B R5
 
     # Pour tout le monde
-    cpuname=re.sub( r'[@][{]Name=[^}]*[}]' , "" , cpuname)  # supprimer @{Name=.......}
-
     cpuname=re.sub( r'\s+' , " " , cpuname)    # 1 seul espace consecutif
+
+    # Note: cA va faire rater la detection des 2 cas particuliers: Intel Core i5 E 520    Intel Core i5 750S 
+    # une fois qu'on a un seul espace consecutif, transformer Intel(R) Core(TM) i3 CPU       M 330  en  Intel Core i3-330M
+    cpuname=re.sub( r'Intel Core i([0-9]) ([A-Z]) ([0-9]+)' , r"Intel Core i\1-\3\2" , cpuname)  
+    # et aussi Intel Core i3 550  en Intel Core i3-550
+    cpuname=re.sub( r'Intel Core i([0-9]) ([0-9]+)' , r"Intel Core i\1-\2" , cpuname)  
+
     cpuname=cpuname.strip()
     return cpuname
 
@@ -149,11 +164,9 @@ def CleanCpuname(cpuname):
 # Lit le fichier csv des cpus, et cherche un nom de cpu
 #
 # Les comparaisons se font en minuscules
+# Pour éviter des confusions, on compare sur l'égalité
 # le nom dans Inxi peut être plus grand que le nom dans cpubenchmark.net, mais pas toujours
-#  donc on regarde de 2 manieres:
-#   - si la valeur inxi CONTIENT la valeur web ( mais on exclut les valeurs web trop petites, pour éviter les erreurs )
-#   - si la valeur web contient la valeur inxi
-#  
+#
 #   valeur Inxi                           Valeur cpubenchmark.net
 #   13th Gen Intel Core i7-1360P          Intel Core i7-1360P 
 #   Intel Core i7-5600U                   Intel Core i7-5600U @ 2.60GHz
@@ -170,18 +183,29 @@ def FindCPUMARK(cpufile,cpuname ):
     # lire le fichier des cpu
     cpulist=ReadCSV(cpufile,"")
 
-    print(f"Cherche: {cpuname}")
+    #cpuname="Intel Core i3-6100U"
 
+
+    cpuold=cpuname
     cpuname=CleanCpuname(cpuname)
+
     cpuname=CpuChange().Adapt(cpuname)
+    print(f"Cherche: {cpuold}       Transformé en: {cpuname}")
+
+
     newcpuname=cpuname.lower()
+
+
 
 
 
     for cpudata in cpulist:
         key=cpudata["NAME"]
         newkey=key.lower()
-        if ( len(newkey) > 10 and newcpuname.find(newkey) > -1) or ( newkey.find(newcpuname) > -1 ):
+        # ANCIEN TEST  qui provoque des confusions    Intel Core i3-6100U est confondu avec Intel Core i3-6100   
+        #   if ( len(newkey) > 10 and newcpuname.find(newkey) > -1) or ( newkey.find(newcpuname) > -1 ):
+        # ce nouveau test limite le risque de confusion, mais ne permet plus de trouver AMD PRO A10-8730B R5, 10 COMPUTE CORES 4C+6G
+        if newcpuname == newkey:
 
             print(f"Trouve: {key}")
             value=cpudata["CPUMARK"].replace(",","")  # les valeurs peuvent contenir un separateur de milliers
@@ -539,7 +563,7 @@ def MakeSendFiles(xfer=True):
     MakeRapport( filerapport )
     MakeFiches( filefiche , filedouchette )
     MakeFicheAchat(fileachat)
-    Caract().Html(filecaract)
+    ####################################Caract().Html(filecaract)
 
     # copy fichier scan systeme
     CopyFile2File( TMPSCANFILE , filescan )
@@ -577,7 +601,7 @@ def MakeSendFiles(xfer=True):
     # Génération d'un .zip pour  envoi 
     print(f"\nCreation du fichier: {ZIPFILE} pour envoi vers audits.emmaus-connect.org" )
     if os.path.isfile(ZIPFILE) :  os.remove(ZIPFILE)
-    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat , filecaract ]
+    files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat ]
     MakeZip( ZIPFILE , files )
 
     # IHM de transfer

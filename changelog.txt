@@ -1,4 +1,12 @@
+-------------------- V2.4.1  23 Juin 2025 ------------------------------- -
+
+Correctif:
+    calcul du cpumark:
+       correction d'un bug, qui provoquait une confusion entre   Intel Core i3-6100U    /  Intel Core i3-6100
+       amélioration de la détection des cpuname de type  Intel Core i7 M 620     ( changer en Intel Core i7-620M )
+
 -------------------- V2.4.0  12 Juin 2025 ------------------------------- -
+
 Fonctions:
     Nouvelle catégorisation: mise à jour de regles.csv
 
