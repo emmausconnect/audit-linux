@@ -1,20 +1,10 @@
-#!/bin/bash
-
 ##############################################################
-# Audit Linux : 
+# Audit Linux : MENU
 #
 # ouvrir une fenêtre shell
-# se mettre dans le repertoire contenant audit.sh
+# se mettre dans le repertoire contenant menu.sh
 # 
-# Variante1:
-#   bash audit.sh GRPCxx-xxxx
-#
-# Variante2:
-#   bash audit.sh   ( l'identifiant du PC sera demandé et mémorisé )
-#       
-#
-# NOTE:
-# le pwd sera peut être demandé pour activer sudo 
+# bash menu.sh 
 #
 # IMPORTANT
 #   Ce script est supposé être lancé sur un OS  LMDE 6
@@ -31,8 +21,12 @@ fi
 
 cd $dir
 
+read -p "❗️Entrer le mot de passe: " ZZZEMMAUS
+export ZZZEMMAUS
+echo ""
 
+sudo -K
 
-python3 -B audit.py $1 $2 $3
+python3 -B menu.py $1 $2 $3
 
 

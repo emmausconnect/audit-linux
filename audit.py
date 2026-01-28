@@ -21,6 +21,7 @@ import sys
 import datetime
 import os
 import html
+import time
 
 # fichiers include
 from  outils import *  
@@ -563,7 +564,7 @@ def MakeSendFiles(xfer=True):
     MakeRapport( filerapport )
     MakeFiches( filefiche , filedouchette )
     MakeFicheAchat(fileachat)
-    ####################################Caract().Html(filecaract)
+    Caract().Html(filecaract)
 
     # copy fichier scan systeme
     CopyFile2File( TMPSCANFILE , filescan )
@@ -667,12 +668,16 @@ def TransfertBolc(filebolcimport=""):
 #
 # INPUT
 #  filename:  nom complet du fichier
+#  full:      si False, on fait un affichage minimal
 #--------------------------------------------------
-def MakeRapport(filename):
+def MakeRapport(filename,full=True):
+
+    if full: icon=""
+    else   : icon="➡️ "
 
     CRLF="\r\n"
 
-    print("**Creation: " , filename)
+    if full : print("**Creation: " , filename)
 
     items=[
     f"======================= Rapport d'Audit  (Version={VERSION}) ================",   
@@ -681,35 +686,34 @@ def MakeRapport(filename):
     f" REALISE PAR     : {Admin.benevole}  ",
     f"=================================================================================",
     f"",
-    f"--------------------------- Informations (les tailles Ram/Disque sont en GB) ------------------"
     ]
 
     txt1=CRLF.join(items) + CRLF
 
-    txt2=""
+    txt2=    f"✅--------------------------- Informations (les tailles Ram/Disque sont en GB) ------------------" +CRLF + CRLF
     for key,value in infos.items():
         # astuce pour remplacer la valeur numerique des cles SSD et HDD
         if key in [ "SSD","HDD" ] : value="oui"
 
-        txt2=txt2 + f"{key:<20}: {value}" + CRLF
+        txt2=txt2 + f"{icon}{key:<20}: {value}" + CRLF
 
 
     items=[
     f"",
-    f"--------------------------- Notes -----------------------------",
+    f"✅--------------------------- Notes -----------------------------",
     f" Note Brute : {Admin.notebrut} " ,
     f" Note Nette : {Admin.notenet} ",
     f"",
     f" Categorie  : {Admin.categorie}",
     f"",
-    f"--------------------------- Observations -----------------------------",
+    f"✅--------------------------- Observations -----------------------------",
     Admin.observations
     ]
 
     txt3=CRLF.join(items) + CRLF
 
     with open( filename,"w") as f:
-        f.write(txt1)
+        if full: f.write(txt1)
         f.write(txt2)
         f.write(txt3)
 
@@ -1118,11 +1122,11 @@ def ProcessAudit(mini=False,xfer=False):
     # la dernière fois est celle de l'OS cible
     # INACTIVE !!!
     if False:
-        for os in [ "WIN", "LINUX" ]:
+        for ostype in [ "WIN", "LINUX" ]:
             tmptxtnotes=[]
             sectionnote="#NOTE-" + os  
             note = ComputeNote( infos, CSVREGLES, sectionnote, tmptxtnotes )
-            target="Compatible-" + os
+            target="Compatible-" + ostype
             if note < 0 : value ="non"
             else:         value="oui"
             infos[target]=value
@@ -1144,11 +1148,18 @@ def ProcessAudit(mini=False,xfer=False):
     Admin.categorie=ComputeCategorie( CSVREGLES,Admin.notenet)
     print(f"Categorie={Admin.categorie}")
 
+    #------------------- affichage rapide ------------------------
+    filename=TMPDISK + "infos.txt"
+    MakeRapport(filename, False)
+    cmd=f"xed --new-window {filename} &"   #background pour pas bloquer le menu
+    os.system(cmd)
+
     # si Mini Audit , pas d'envoi ....
     if mini : return
 
     # Sasie des infos manuelles
-    result=ManualAdminInfosIHM("Saisie Informations")
+    time.sleep(3)  # Evite que l'affichage rapide arrive après la boite de dialogue
+    result=ManualAdminInfosIHM("Saisie Informations Administratives")
     # si on n'a pas cliqué OK, les infos saisies sont invalides, et peuvent provoquer bugs
     if result.get("OK","") == "" : return 
 

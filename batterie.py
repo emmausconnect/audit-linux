@@ -19,7 +19,7 @@ guide="""
 
 Il y a 2 moyens pour faire cette mesure :
 
-Méthode1 (rapide):
+Méthode1 (rapide: 10 à 20mn)
 - Inhiber l'économiseur d'écran ( Préférences => Paramètre Système => Economiseur d'Ecran )
 - Inhiber la mise en veille     ( Préférences => Paramètre Système => Gestion d'Alimentation )
 
@@ -27,7 +27,7 @@ Méthode1 (rapide):
 - Enlever le cable du chargeur de batterie
 - Laisser tourner cet outil pendant 10 ou 20mn, et retenir l'estimation d'automonie qu'il donne
 
-Méthode2 (lente):
+Méthode2 (lente: jusqu'à l'arrêt du PC)
 - Inhiber l'économiseur d'écran ( Préférences => Paramètre Système => Economiseur d'Ecran )
 - Inhiber la mise en veille     ( Préférences => Paramètre Système => Gestion d'Alimentation )
 - Charger la batterie à 100%

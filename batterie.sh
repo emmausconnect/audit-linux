@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ##############################################################
 # Linux: Détection de l'autonomie de la batterie
 #
@@ -21,6 +23,15 @@ then
 fi
 
 cd $dir
+
+echo "********** TEST AUTONOMIE BATTERIE ***************"
+echo ""
+
+
+if [ -v ZZZEMMAUS ]
+then
+    echo "$ZZZEMMAUS" | sudo -S -p "init sudo" echo "..............."
+fi
 
 sudo python3 -B batterie.py
 

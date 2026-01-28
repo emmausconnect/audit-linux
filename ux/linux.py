@@ -33,8 +33,9 @@ infos={}  # donnees technique issues du scan systeme
 #------------------------------------------
 def SystemScan(inxifile):
 
-    cmd=f"(sudo inxi -F -xx -y1) > {inxifile}"
+    cmd=f"(sudo    inxi -F -xx -y1) > {inxifile}"
     os.system(cmd)
+
 
 #------------------------------------------
 # Execute l'audit technique : lancement du scan, decodage 
@@ -121,7 +122,8 @@ def DecodeInxi( inxifile ):
     stack[0]= inxidata
 
     items=[]
-    with open(inxifile) as f:
+    # errors=ignore permet de survivre au cas où le fichier inxi n'est pas utf-8 ( presence de \x00 dans les infos batterie
+    with open(inxifile,'r',errors='ignore') as f:
         for line in f:
             if line.strip("\n ") != "" :
                 items.append( InxiLine(line) )

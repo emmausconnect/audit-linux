@@ -74,7 +74,7 @@ def Browser(file):
         if WIN:
             cmd=f"start {file}"
         else:
-            cmd=f"firefox {file}"    
+            cmd=f"firefox {file} &"    # en background pour pas bloquer l'ihm
         os.system(cmd)  
 
 #----------------------------------------------------------

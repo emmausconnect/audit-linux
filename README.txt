@@ -14,9 +14,9 @@ Usage:
   ( Pas besoin d'être root. Mais le script va temporairement utiliser  'sudo' pour lancer la commande inxi )
  
   Se mettre dans le répertoire audit
-       bash audit.sh GRPCxx-xxxx
+       bash audit.sh GRPCxx-xxxx    
+       bash audit.sh                 ( l'identifiant Emmaus sera demandé et mémorisé )
 
-  ( Il faut passer l'Identifiant PC en paramètres: comme ça, si on veux rejouer l'audit, pas besoin de le ressaisir )
 
 
   REMARQUE:  

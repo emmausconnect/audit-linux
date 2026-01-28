@@ -1,3 +1,31 @@
+-------------------- V2.5.0 1 Oct 2025 -------------------------------
+
+Fonctions:
+    AuditLinux s'enrichit d'un MENU  [Version BETA]  ( appelable via "bash menu.sh" )
+    - Appel d'outils de tests ( disque, batterie, clavier/son/webcam )
+    - Saisie des Caractéristiques Matériel ( et mémorisation des infos saisies )
+    - Lancement de l'Audit ( mini-audit ou audit+transferts)
+    - Utilitaires BOLC ( changement de statut du PC )
+    - Accès aux sites web des constructeurs
+    - Documentation
+    - Oubli de l'identifiant Emmaus, précdemment saisi
+
+    L'audit continue à être appelable directement
+        # en fournissant l'identifiant Emmaus
+        bash audit.sh  GRPCxx-nnnn
+
+        # sans saisir l'identifiant Emmaus => il sera demandé et mémorisé 
+        bash audit.sh  
+
+    Le test de batterie continue à être appelable directement
+        bash batterie.sh
+
+Remarque:
+    L'audit lance désormais une fenêtre qui affiche les infos du PC.  Penser à fermer/minimiser cette fenêtre, si elle recouvre les écrans de saisie ...
+
+Correctifs:
+    On survit désormais au cas particulier où le fichier généré par la commande inxi contient des caractères incorrects ( non UTF-8 ), typiquement dans le nom de la batterie
+
 -------------------- V2.4.1  23 Juin 2025 ------------------------------- -
 
 Correctif:
