@@ -1,0 +1,22 @@
+VERSION=2.1.5
+#------------- files ----------------------
+audit.py
+audit.sh
+batterie.py
+batterie.sh
+cpus.csv
+outils.py
+ux
+ihm.py
+ihmlinux.py
+rtf.py
+README.txt
+regles.csv
+version.txt
+changelog.txt
+DecouverteMonPC-Linux
+doc
+
+
+
+
