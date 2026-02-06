@@ -28,6 +28,13 @@ from  outils import *
 from cpumark import *
 from categorie import *
 
+import logging
+_logger = logging.getLogger("audit-tectech")
+_logger.level = logging.WARNING
+_hdlr = logging.StreamHandler()
+_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
+_hdlr.setFormatter(_formatter)
+_logger.addHandler(_hdlr)
 
 WIN=ISWIN()
 if WIN:
@@ -356,7 +363,8 @@ def MakeSendFiles(xfer=True):
         hbox=Zhbox(dlgsend.area,30,30)
         Zbutton(dlgsend , hbox, "QUIT", "QUITTER" ,"Red")
         Zbutton(dlgsend , hbox, "EMMAUS", "Serveur Audit uniquement" ,"LightBlue")
-        Zbutton(dlgsend , hbox, "BOTH", "Serveur Audit + BOLC " ,"Yellow")
+        btntitle = f'tec.tech({"PROD" if useproapi_ else "TEST"})' if tectech_ else "BOLC"
+        Zbutton(dlgsend , hbox, "BOTH", f"Serveur Audit + {btntitle} " ,"Yellow")
         rep=dlgsend.Run()
         exitcode=dlgsend.exitcode
     else:
@@ -377,9 +385,13 @@ def MakeSendFiles(xfer=True):
         # Pour déposer sur le bolc par sftp, il faut rajouter une 1e colonne contenant le N° du don
         # - si le PC existe déjà dans le bolc, on peut laisser une valeur vide
         # - sinon l'import échouera si le N° de don est vide
-        # Le nom de fichier doit être comme   GR-PORTABLE-date.csv , sinon l'import bolc l'ignore 
-        print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
-        TransfertBolc(filebolcimport,DEBUG)
+        # Le nom de fichier doit être comme   GR-PORTABLE-date.csv , sinon l'import bolc l'ignore
+        if not tectech_:
+            print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
+        else:
+            print(f"\n-------- envoi des infos du fichier bolc {filebolcimportbase}"
+                  f' vers le serveur tec.tech ({"PROD" if useproapi_ else "TEST"}) ------------------')
+        TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_)
         print()
 
 
@@ -597,7 +609,7 @@ def MakeBolc(filename):
     # newline="" est indispensable sous windows pour eviter que \n devienne CRLF
     with open(filename,"w",newline="") as f:
         f.write(txt + "\r\n")
-                         
+
 #===========================================================================================
 # Changement du statut Bolc
 #
@@ -665,7 +677,7 @@ def BolcStatut(debug=False):
         f.write( bolcdata )
 
 
-    TransfertBolc( filebolc , debug)
+    TransfertVersBaseAdmin( filebolc , debug, tectech_, useproapi_)
 
 
 #===========================================================================================
@@ -1017,28 +1029,74 @@ if len(cpulist) > 0:
         print()
     sys.exit()
 
-
-
 if __name__ == '__main__':
-    
-    # Vérifier l'identifiant Emmaus passé en paramètre
-    if len(sys.argv) > 1:
-        Ecid().Init(sys.argv[1])
-        nopc=False
+
+    # The existing parameter handling is not compatible with an argparse-based parsing, so we continue playing with
+    # sys.argv without striving for elegance or efficiency...
+
+    # The accepted parameter list styles are:
+    #   python3 -B audit.py                      # [1] backward comptible with BOLC
+    #   python3 -B audit.py GRPC26-0043          # [2] backward comptible with BOLC
+    #   python3 -B audit.py             TECTECH [PROD|TEST] # [3] works with tec.tech (case-insensitive)
+    #   python3 -B audit.py GRPC26-0043 TECTECH [PROD|TEST] # [4] works with tec.tech (case-insensitive)
+
+    _logger.level = logging.DEBUG
+    _logger.debug(sys.argv)
+    prod_or_test_ = ["PROD", "TEST"]
+    n_ = len(sys.argv) - 1
+    nopc = None
+    useproapi_ = tectech_ = False
+    if n_ == 0:  # [1]
+        _logger.debug("Aucun paramètre ==> BOLC")
+        nopc = True
+    elif n_ == 1:  # [2]
+        _logger.debug("Un seul paramètre ==> BOLC + ce paramètre doit être un idEsn")
+        if sys.argv[1].lower() != 'tectech':  # [2]
+            Ecid().Init(sys.argv[1].upper())
+            nopc = False
+        else:
+            _logger.error(f"Un parmi {'or'.join(prod_or_test_)} doit être précisé avec TECTECH")
+            sys.exit(1)
+    elif n_ == 2:  # [3]
+        _logger.debug("Deux paramètres ==> TECTECH sans idEsn")
+        if sys.argv[1].lower() == 'tectech' and sys.argv[2].upper() in prod_or_test_:
+            _logger.debug("case [3, TECTECH]")
+            nopc = True
+            tectech_ = True
+            useproapi_ = sys.argv[2].upper() == "PROD"
+        else:
+            _logger.error(f"On attend: TECTECH [PROD|TEST]")
+            sys.exit(1)
+    elif n_ == 3:  # [4]
+        _logger.debug(sys.argv)
+        if sys.argv[2].lower() == 'tectech' and sys.argv[3].upper() in prod_or_test_:
+            Ecid().Init(sys.argv[1].upper())
+            _logger.debug("case [4, TECTECH]")
+            nopc = False
+            tectech_ = True
+            useproapi_ = sys.argv[2].upper() == "PROD"
+        else:
+            _logger.error(f"On attend: idEsn TECTECH [PROD|TEST]")
+            sys.exit(1)
     else:
-        nopc=True
+        _logger.error("Paramètres incorrects. Abandon...")
+        sys.exit(1)
+
+    if useproapi_:  # tant que les tests ne sont pas finis
+        _logger.warning("Encore en phase de test ==> le mode TEST forçé malgré votre demande.")
+        useproapi_ = False
+
+    _logger.info(f"nopc = {nopc}")
+    _logger.info(f"tectech_ = {tectech_}")
+    _logger.info(f"useprodapi_ = {useproapi_}")
+
+    # sys.exit(0)
 
     ProcessAudit(mini=False)
-    
+
+    global infos
+    _logger.info(f"infos = {infos}")
+
     # Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
     if nopc:
         Zinputbox("**FIN**" , "                                Fin de l'audit !                              ")
-
-
-
-
-  
-    
-
-
-

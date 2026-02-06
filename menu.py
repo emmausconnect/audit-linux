@@ -139,10 +139,10 @@ def MenuRecondActions(owner,id):
         GetPasswd()
         MajPwd()
 
-
-    if id == "BOLC":
-        filebolc=os.path.join( TMPDISK,"-bolc.txt")
-        TransfertBolc(filebolc)
+    # id is never "BOLC" ==> this block is useless
+    # if id == "BOLC":
+    #     filebolc=os.path.join( TMPDISK,"-bolc.txt")
+    #     TransfertBolc(filebolc)
 
     if id == "STATUT":
         BolcStatut(DEBUG)

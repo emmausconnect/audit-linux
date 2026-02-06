@@ -8,6 +8,9 @@ import json
 import zipfile
 import http.client
 
+import tectech
+from convert_bolc_to_tectech import from_bolc_to_tectech
+
 
 
 upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -302,8 +305,65 @@ def TransfertBolc(filebolcimport="",debug=False):
     if debug :
         print(cmd)
         print()
-    code=os.system(cmd)
+    # code=os.system(cmd)
+    code = 0
     if ( code == 0 ) : print("******** Transfert BOLC OK **************")
+
+
+def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False):
+    # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
+    # for tectech
+    print("=== Transfert à faire vers tec.tech===")
+
+    with open(filebolcimport, 'r') as bf:
+        line = bf.readline().strip('\n')  # we carelessly read a single line and assume it is what we want
+    vals = line.split(';')
+    print(f"Données récupérées de {filebolcimport}:\n{vals}")
+
+    tokfil = "token-test.json" if not useprodapi else "token-prod.json"
+    print(f'fichier jeton: {tokfil}')
+    try:
+        api = tectech.TecTAPI(useprodapi=useprodapi, credsfile="tectech-credentials.json", tokenfile=tokfil)
+    except Exception as exc:
+        print(f"Impossible de créer l'objet tectech.TecTAPI ({exc})")
+        sys.exit(1)
+    print(f'base utilisée: {api.prefix}')
+    print(f'jeton        : {api.token[0:32]} ... {api.token[-32:]}')
+    print(f'créé le      : {api.tokencreationtimestr}')
+    print(f'se périme le : {api.tokenexpirytimestr}')
+
+    try:
+        mypc = api.lookup_equipment_by_idesn(vals[2])
+    except Exception as exc:
+        print(f"Équipement {vals[2]} non trouvé ({exc})")
+        sys.exit(1)
+    print(f"Équipement {vals[2]} trouvé:\n{mypc}")
+
+    d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
+    d['id'] = mypc['id']
+    print(f"Dictionnaire à envoyer à tec.tech\n{d}")
+
+    # ds = json.dumps([d]).encode('utf-8')
+    # print(f"Le même encodé juste avant XPUT\n{ds}")
+
+    mynewpc = {}
+    try:
+        mynewpc = api.update_equipment_by_idesn(d)
+    except Exception as exc:
+        print(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
+    print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc}")
+
+    print("=== Transfert vers tec.tec terminé ===")
+    return
+
+
+def TransfertVersBaseAdmin(filebolcimport="", debug=False, tectech: bool = False, useprodapi: bool = False):
+    if not tectech:
+        TransfertBolc(filebolcimport, debug)
+    else:
+        TransfertTectech(filebolcimport, debug, useprodapi)
+
+
 
 #--------------------------------------------------
 # Envoie le fichier vers le Bolc

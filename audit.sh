@@ -29,10 +29,23 @@ then
   dir="."
 fi
 
+export AUDITDIR=$(readlink -e $(dirname $0))
+echo "AUDITDIR=${AUDITDIR}"
+printf "Liste de paramètres:\n"
+for v in $*; do printf ">$v<\n"; done
+
 cd $dir
 
+# Leave the parameter parsing and checking to the Python code
+# However, the acceptable parameter list styles are:
+#   python3 -B audit.py                      # [1] backward comptible with BOLC
+#   python3 -B audit.py GRPC26-0043          # [2] backward comptible with BOLC
+#   python3 -B audit.py             TECTECH [PROD|TEST] # [3] works with tec.tech (case-insensitive)
+#   python3 -B audit.py GRPC26-0043 TECTECH [PROD|TEST] # [4] works with tec.tech (case-insensitive)
 
-
+# left as it was but why not:
+#   python3 -B audit.py $*
+# ?
 python3 -B audit.py $1 $2 $3
 
 
