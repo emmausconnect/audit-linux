@@ -12,11 +12,23 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 
 - certaines des données qui allaient dans le BOLC n'ont pas de point de chute naturel dans tec.tech. L'outil les regroupe dans le champ "commentaire" de tec.tech.
 
-# Obtenir l'outil
+# Obtenir et utiliser l'outil pendant la phase de test
+- ouvrir un terminal sur la machine LMDE-7 fraîchement installée
+- télécharger le code depuis GitHub:
 
+```git clone --branch tectech_integration --single-branch --depth 1 git@github.com:emmausconnect/audit-linux.git```
+- se positionner dans le bon répertoire:
 
+```cd audit-linux```
+- y créer le fichier ```tectech-credentials.json``` avec votre éditeur favori
+- lancer l'outil d'audit (exemple avec GRPC25-0322):
 
-# Utiliser l'outil
+```sudo /mnt/linux-bernard-maison-to-tec.tech/audit.sh GRPC25-0322 tectech test```
+- remplir les formulaires et cliquer sur les boutons comme lors de l'utilisation avec BOLC
+- garder un œil sur les messages qui défilent dans le terminal
+- en cas de problème, merci de m'envoyer ce qui est affiché sur le terminal **au format texte** (SVP pas d'images là où il n'y a que du texte: je ne sais pas les exploiter)
+
+# Utiliser l'outil (détails)
 
 L'outil fonctionne encore avec le BOLC. Il crée localement les mêmes fichiers quepour le BOLC. La seule différence est que, sur demande, au lieu d'émettre un fichier vers le BOLC, il émet vers tec.tech, une requête de modification du "materiel"
 
