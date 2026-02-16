@@ -15,7 +15,7 @@ PRODAPIURL = "https://tec-tech-prod.osc-fr1.scalingo.io/api"
 
 
 _logger = logging.getLogger("tectech")
-_logger.level = logging.WARNING
+_logger.level = logging.DEBUG
 _hdlr = logging.StreamHandler()
 _formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
 _hdlr.setFormatter(_formatter)
@@ -75,13 +75,14 @@ class Token:
         if Token.__is_initialized:
             return
 
-        uniquetmpfile = f"/tmp/token-prod-{UNIQUESHA1}.json" if "prod" in prefix else f"/tmp/token-{UNIQUESHA1}.json"
+        uniquetmpfile = f"token-prod.json" if "prod" in prefix else f"token-test.json"
 
         if not tokenfile:
             # # this is a trick: when no token file is specified, we force a non-existing file so that the Token
             # # construction code will force the creation of a token file in /tmp
             # tokenfile = f"/tmp/{UNIQUESHA1[::-1]}"  # a non-existing file
             tokenfile = uniquetmpfile
+            _logger.warning(f"Fichier jeton manquant ==> forcé à {tokenfile}")
 
         tfpath = os.path.realpath(os.path.normpath(tokenfile))
 
@@ -102,12 +103,12 @@ class Token:
                     _logger.info(f"Écriture du fichier token {uniquetmpfile}")
                     Token._getnewtoken(prefix, uniquetmpfile, clientid, clientsec)
         else:
-            if os.access(tfpath, os.W_OK):
-                # if the token file is writeable, create it
+            if (os.path.exists(tfpath) and os.access(tfpath, os.W_OK)) or os.access(os.path.dirname(tfpath), os.W_OK):
+                # if the token file is writeable, create it or update it
                 _logger.info(f"Écriture du fichier token {tfpath}")
                 Token._getnewtoken(prefix, tfpath, clientid, clientsec)
             else:
-                # create a new token file in /tmp so that we have a chance to reuse it
+                # create a new token file so that we have a chance to reuse it
                 _logger.info(f"Écriture du fichier token {uniquetmpfile}")
                 Token._getnewtoken(prefix, uniquetmpfile, clientid, clientsec)
 
@@ -155,7 +156,7 @@ class Token:
             body = response.read()
 
         with open(tokenfile, "w", encoding="utf-8") as f:
-            json.dump(body, f, indent=2)
+            json.dump(json.loads(body.decode("utf-8")), f, indent=2)
 
         return Token._loadfromfile(tokenfile)
 
