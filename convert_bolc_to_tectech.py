@@ -111,7 +111,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         # 10: infos["Modele"],            # Modele ...
         d['model'] = vals[10]
         # 14: infos["NumeroSerie"],       # Numero de serie
-        d['commentaire'] = vals[14]
+        d['numeroSerie'] = vals[14]
         # 15: infos["Processeur"],        # Type de Processeur
         d['processeur'] = vals[15]
         # 16: infos["DisqueType"],        # Type de disque HDD/SSD

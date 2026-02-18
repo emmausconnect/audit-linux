@@ -73,7 +73,7 @@ sudo bash audit.sh tectech test
 ## Notes importantes pour tec.tech
 - les paramètres sont convertis en majuscules avant exécution
 - le mode PROD est ignoré tant que l'outil est considéré en phase de test
-- les gestionnaires de tec.tech demandent à ce qu'on économise les jetons d'accès à la base; pour cela, l'outil stocke le jeton qu'il a acquis dans un fichier local ```token.json``` (ou ```prod-token.json```) puis l'utilise tant qu'il est valide; il est donc important que l'outil puisse écrire dans le répertoire ou se trouve audit.sh
+- les gestionnaires de tec.tech demandent à ce qu'on économise les jetons d'accès à la base; pour cela, l'outil stocke le jeton qu'il a acquis dans un fichier local ```token-test.json``` (ou ```token-prod.json```) puis l'utilise tant qu'il est valide; il est donc important que l'outil puisse écrire dans le répertoire ou se trouve audit.sh
 ## Rapporter des anomalies, faire des suggestions, etc.
 Durant la phase de test, merci d'utiliser les "Issues" de GitHub: c'est un moyen simple et suffisant pour suivre les problèmes/questions/suggesttions.
 Pour la suite, cela reste encore à décider...
