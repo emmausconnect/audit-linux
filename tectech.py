@@ -267,7 +267,8 @@ class TecTAPI:
         nb = int(d['total'])
 
         if nb == 0:
-            return {}
+            errmsg = f'La recherche de {idesn} a échoué'
+            raise TecTapiEquipmentNotFound(errmsg)
 
         if nb > 1:
             errmsg = f"La recherche de {idesn} a trouvé plus d'une ({nb}) occurences"

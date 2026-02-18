@@ -23,7 +23,7 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 - y créer le fichier ```tectech-credentials.json``` avec votre éditeur favori
 - lancer l'outil d'audit (exemple avec GRPC25-0322):
 
-```sudo /mnt/linux-bernard-maison-to-tec.tech/audit.sh GRPC25-0322 tectech test```
+```sudo bash /mnt/linux-bernard-maison-to-tec.tech/audit.sh GRPC25-0322 tectech test```
 - remplir les formulaires et cliquer sur les boutons comme lors de l'utilisation avec BOLC
 - garder un œil sur les messages qui défilent dans le terminal
 - en cas de problème, merci de m'envoyer ce qui est affiché sur le terminal **au format texte** (SVP pas d'images là où il n'y a que du texte: je ne sais pas les exploiter)
@@ -59,7 +59,7 @@ avec IDESN respectant le modèle:
 ```
 Par exemple:
 ```
-sudo audit.sh GRRPC25-0322 tectech test
+sudo bash audit.sh GRRPC25-0322 tectech test
 ```
 
 - sans idEsn (possible)
@@ -68,7 +68,7 @@ sudo python3 -B audit.py <IDESN> TECTECH [PROD|TEST]
 ```
 Par exemple:
 ```
-sudo audit.sh tectech test
+sudo bash audit.sh tectech test
 ```
 ## Notes importantes pour tec.tech
 - les paramètres sont convertis en majuscules avant exécution

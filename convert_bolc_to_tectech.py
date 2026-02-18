@@ -121,7 +121,11 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         # 20: infos["RAM"],               # RAM
         d['RAM'] = __nullableint(vals[20])
         # 22: infos["Webcam"],            # Webcam présente ?
-        d['webcam'] = vals[22]
+        if vals[22]:  # ignore if this field is empty in BOLC of contains something else than "oui" or "non"
+            if vals[22].lower() == "oui":
+                d['webcam'] = True
+            elif vals[22].lower() == "non":
+                d['webcam'] = False
         # 30: infosystem,                 # Commentaire sur le reconditionnement : on y met l'OS cible
         opsys = vals[30].lower()
         if "android" in opsys:
