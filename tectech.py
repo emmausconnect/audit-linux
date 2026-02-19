@@ -234,6 +234,52 @@ class TecTAPI:
         TecTAPI.__token_creation_time_str = tok.creationtimestr
         TecTAPI.__is_initialized = True
 
+
+    @classmethod
+    def lookup_equipment_by_idmatrec(cls, idmatrec: str) -> dict:
+        # look for a "materiel" in tec.tech, based only on idMaterielReconditionneur
+        epmateriel = "materiel"
+        limit = 2
+        maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idMaterielReconditionneur={idmatrec}&page=1&limit={limit}"
+        headers = {
+            'Accept': 'application/json',
+            'Content-type': 'application/json',
+            'inclureGroupesLies': 'true',
+            'Authorization': f'Bearer {TecTAPI.__token}'
+        }
+        req = urllib.request.Request(url=maturl, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req) as response:
+                body = response.read()
+                status = response.status
+                # code = response.code
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+            errmsg = f'La recherche de {idmatrec} par idMaterielReconditionneur a échoué ({exc})'
+            # _logger.error(errmsg)
+            raise TecTapiEquipmentNotFound(errmsg) from exc
+
+        if status != 200:
+            errmsg = f'La recherche de {idmatrec} par idMaterielReconditionneur a échoué (status: {status})'
+            # _logger.error(errmsg)
+            raise TecTapiEquipmentNotFound(errmsg)
+
+        d = json.loads(body.decode("utf-8"))
+
+        nb = int(d['total'])
+
+        if nb > 1:
+            errmsg = f"La recherche de {idmatrec} par idMaterielReconditionneur a trouvé plus d'une ({nb}) occurences"
+            # _logger.error(errmsg)
+            raise TecTapiDuplicateEquipmentFound(errmsg)
+
+        if nb == 0:
+            errmsg = f'La recherche de {idmatrec} par idMaterielReconditionneur a échoué'
+            raise TecTapiEquipmentNotFound(errmsg)
+
+        # nb is certainly 1!
+        return d['data'][0]
+
+
     @classmethod
     def lookup_equipment_by_idesn(cls, idesn: str) -> dict:
         # look for a "materiel" in tec.tech, based only on idEsn
@@ -266,15 +312,21 @@ class TecTAPI:
 
         nb = int(d['total'])
 
-        if nb == 0:
-            errmsg = f'La recherche de {idesn} a échoué'
-            raise TecTapiEquipmentNotFound(errmsg)
-
         if nb > 1:
             errmsg = f"La recherche de {idesn} a trouvé plus d'une ({nb}) occurences"
             # _logger.error(errmsg)
             raise TecTapiDuplicateEquipmentFound(errmsg)
 
+        if nb == 0:
+            # tenter une recherche sur idMaterielReconditionneur
+            try:
+                d = cls.lookup_equipment_by_idmatrec(idesn)
+            except (TecTapiEquipmentNotFound, Exception) as exc:
+                raise TecTapiEquipmentNotFound from exc
+            else:
+                return d
+
+        # nb is certainly 1!
         return d['data'][0]
 
     @classmethod
@@ -409,13 +461,15 @@ if __name__ == "__main__":
     _logger.info(f'créé le      : {api_.tokencreationtimestr}')
     _logger.info(f'se périme le : {api_.tokenexpirytimestr}')
 
-    mypc_ = api_.lookup_equipment_by_idesn("GRPC25-0322")
+    mypc25_ = api_.lookup_equipment_by_idesn("GRPC25-0322")
+    mypc26_ = api_.lookup_equipment_by_idesn("GRPC26-1961")
+
 
     fmt_ = "%Y-%m-%d %H:%M:%S"
     updtime_ = datetime.strftime(datetime.now(), fmt_)
-    mypc_["commentaire"] = f'Modified by PaulG on {updtime_}'
-    idesn_ = mypc_["idEsn"]
+    mypc26_["commentaire"] = f'Modified by PaulG on {updtime_}'
+    idesn_ = mypc26_["idEsn"]
 
-    mynewpc_ = api_.update_equipment_by_idesn(mypc_)
+    mynewpc_ = api_.update_equipment_by_idesn(mypc26_)
 
     sys.exit(0)

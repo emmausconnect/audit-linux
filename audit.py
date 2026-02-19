@@ -30,7 +30,7 @@ from categorie import *
 
 import logging
 _logger = logging.getLogger("audit-tectech")
-_logger.level = logging.WARNING
+_logger.level = logging.DEBUG
 _hdlr = logging.StreamHandler()
 _formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
 _hdlr.setFormatter(_formatter)

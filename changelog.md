@@ -1,0 +1,23 @@
+# 3.0.2
+
+Quelques améliorations, à la suite des premiers retours de Charles M. et Éric D., que je remercie pour leur patience.
+
+- la recherche d'un matériel par l'identifiant `eettaa-nnnn` (e.g.: GRPC26-1961) donné lors du lancement de `audit.sh` se fait désormais de la façon suivante
+    - on recherche d'abord une correspondance sur le champ `ID ESN` de TECT; si on trouve, on en reste là
+    - sinon, on recherche une correspondance sur le champ `ID matériel chez le reconditionneur`; ce dernier cas est assez fréquent pour les matériels reconditionnés en ESN: l'équipe TECT a décidé, dans un tel cas, de mettre cet identifiant dans `ID matériel chez le reconditionneur` et de laisser `ID ESN` vide.
+
+- le mode DEBUG est par défaut pour avoir des messages plus détaillés dans cette phase
+
+
+# 3.0.1
+
+Ceci est une version de test, la toute première version de l'audit Linux destinée à fonctionner avec tec.tech.
+
+Elle a plusieurs limites et défauts déjà identifiés:
+
+- ne fonctionne qu'avec le script `audit.sh` (`menu.sh` n'est pas garanti de bien marcher avec tec.tech)
+- ne permet d'agir que sur des matériels déjà présents danstec.tech
+- identifie un matériel par son seul 'idEsn' (pas encore par 'idMaterielReconditionneur')
+- manque un peu de verbosité (pouvant aider au debug en cette phase de test)
+	
+**N'oubliez pas de lire README.md...**
