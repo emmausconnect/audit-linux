@@ -385,6 +385,7 @@ class TecTAPI:
 
         reqdata = [matup]
         payload = json.dumps(reqdata).encode("utf-8")
+        _logger.debug(f"payload = >{payload}<")
         req = urllib.request.Request(url=maturl, headers=headers, data=payload, method="PUT")
         try:
             with urllib.request.urlopen(req) as response:

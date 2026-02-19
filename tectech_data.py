@@ -12,9 +12,9 @@ allowed_values = {
 
     "categorie": {"PREMIUM", "A", "B", "C", "D"},
 
-    "webcam": {"OUI", "NON"},
+    "webcam": {True, False},
 
-    "lecteurDVD": {"OUI", "NON"},
+    "lecteurDVD": {True, False},
 
     "marque": {"ACER", "ADATA", "ALCATEL", "ALTICE", "ALTYK", "APPLE", "ARCHO", "AST", "ASUS", "BELINEA", "BENQ",
                "BLACKBERRY", "BLACKVIEW", "BLUEBIRD", "BOUYGUES TELECOM", "CANON", "CLEVO", "COMPAQ", "DANEW", "DELL",
