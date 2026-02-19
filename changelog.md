@@ -1,4 +1,10 @@
-# 3.0.2
+## 3.0.4
+
+Bug corrigé:
+
+- l'indication de présence d'une wecbcam est maintenant correctement gérée
+
+## 3.0.2
 
 Quelques améliorations, à la suite des premiers retours de Charles M. et Éric D., que je remercie pour leur patience.
 
@@ -9,7 +15,7 @@ Quelques améliorations, à la suite des premiers retours de Charles M. et Éric
 - le mode DEBUG est par défaut pour avoir des messages plus détaillés dans cette phase
 
 
-# 3.0.1
+## 3.0.1
 
 Ceci est une version de test, la toute première version de l'audit Linux destinée à fonctionner avec tec.tech.
 
