@@ -310,7 +310,7 @@ def TransfertBolc(filebolcimport="",debug=False):
     if ( code == 0 ) : print("******** Transfert BOLC OK **************")
 
 
-def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False):
+def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = ""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
     print("=== Transfert à faire vers tec.tech===")
@@ -333,35 +333,48 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
     print(f'se périme le : {api.tokenexpirytimestr}')
 
     try:
-        mypc = api.lookup_equipment_by_idesn(vals[2])
+        mypc = api.lookup_equipment(vals[2])
     except Exception as exc:
-        print(f"Équipement {vals[2]} non trouvé ({exc})")
+        print(f"Erreur lors de la recherche de {vals[2]} ({exc})")
         sys.exit(1)
-    print(f"Équipement {vals[2]} trouvé:\n{mypc}")
 
-    d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
-    d['id'] = mypc['id']
-    print(f"Dictionnaire à envoyer à tec.tech\n{d}")
+    if mypc:  # mise à jour d'équipement
+        print(f"Équipement {vals[2]} trouvé:\n{mypc}")
+        d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
+        d['id'] = mypc['id']
+        print(f"Dictionnaire à envoyer à tec.tech\n{d}")
 
-    # ds = json.dumps([d]).encode('utf-8')
-    # print(f"Le même encodé juste avant XPUT\n{ds}")
+        # ds = json.dumps([d]).encode('utf-8')
+        # print(f"Le même encodé juste avant XPUT\n{ds}")
 
-    mynewpc = {}
-    try:
-        mynewpc = api.update_equipment_by_idesn(d)
-    except Exception as exc:
-        print(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
-    print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc}")
+        mynewpc = {}
+        try:
+            # print("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+            mynewpc = api.update_equipment(d)
+        except Exception as exc:
+            print(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
+        print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc}")
+    else:  # création d'un nouvel équipement
+        print(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
+        d = from_bolc_to_tectech(vals, idlot=idlot, idmaterielreconditionneur=idmatrecond)
+        print(f"Dictionnaire à envoyer à tec.tech\n{d}")
+        mynewpc = {}
+        try:
+            # print("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+            mynewpc = api.create_equipment(d)
+        except Exception as exc:
+            print(f"La création de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
+        print(f"Nouvel équipement {vals[2]} créé dans tec.tech:\n{mynewpc}")
 
     print("=== Transfert vers tec.tec terminé ===")
     return
 
 
-def TransfertVersBaseAdmin(filebolcimport="", debug=False, tectech: bool = False, useprodapi: bool = False):
-    if not tectech:
+def TransfertVersBaseAdmin(filebolcimport="", debug=False, tect: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = ""):
+    if not tect:
         TransfertBolc(filebolcimport, debug)
     else:
-        TransfertTectech(filebolcimport, debug, useprodapi)
+        TransfertTectech(filebolcimport, debug, useprodapi, idlot, idmatrecond)
 
 
 

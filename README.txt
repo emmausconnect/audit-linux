@@ -4,6 +4,25 @@
 
 ======================================================
 
+
+================================================================================================
+Note importante concernant les versions à partir de 3.y.z
+================================================================================================
+Depuis la version 3.0.1, l'outil a été adapté pour utilisation avec tec.tech.
+
+À partir de la version 3.1.0:
+  -l'outil n'est utilisable qu'avec tec.tech
+  -l'audit se fait exclusivement avec la commande audit.sh
+  -les dialogues lancés avec menu.sh ne permettent pas de faire de l'audit
+
+Se reporter au fichier README-tectech.md
+
+Tout ce qui suit remonte à la version 2.7.1 et ne s'applique pas à l'audit, à strictement parler
+================================================================================================
+
+
+
+
 --------------------------
 Rappel:
 --------------------------

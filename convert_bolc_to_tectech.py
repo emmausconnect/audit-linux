@@ -12,7 +12,7 @@ from tectech import TecTapiBolcFileConversionError
 # for i, f in enumerate(bmbolcfields):
 #     if f.split(',')[0] != '""':
 #         print(f"{i}: {f}")
-# 0: Admin.iddon                 # id don
+# 0: Admin.iddonlot              # id don BOLC ou lot TECT
 # 1: Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
 # 2: Admin.ECID,                 # identifiant EmmausEC
 # 3: infos["Type"],              # type de matériel ( Portable , UC )
@@ -90,7 +90,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
 
         d = dict()
 
-        # 0: Admin.iddon                 # id don
+        # 0: Admin.iddonlot              # id don BOLC ou lot TECT
         ## ==> we use idLot instead
         d['idLot'] = idlot
         # 1: Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
@@ -107,7 +107,12 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
             d['categorie'] = "D"
             d['statut'] = "NON_REEMPLOYABLE"
         # 7: infos["Marque"],            # Marque: HP , Lenovo ...
-        d['marque'] = vals[7].upper() if vals[7].upper() in tectech_data.allowed_values['marque'] else ""
+        # on force la marque ZTE en cas de doute, car TECT n'autorise qu'une liste fermée de valeurs
+        # en pratique, cela n'arrive que dans des conditions de test limitées (par exemple, avec une VM)
+        if v := vals[7].upper() in tectech_data.allowed_values['marque']:
+            d['marque'] = v
+        else:
+            d['marque'] = "ZTE"
         # 10: infos["Modele"],            # Modele ...
         d['model'] = vals[10]
         # 14: infos["NumeroSerie"],       # Numero de serie

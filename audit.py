@@ -99,7 +99,7 @@ class Admin():
 
     # autres infos 
     ECID=""             # identifiant GRPCxx-nnnn
-    iddon=""            # Numero du don dans le Bolc, auquel le PC est associé
+    iddonlot=""            # Numero du don (resp. lot) dans le Bolc (resp. tec.tech), auquel le PC est associé
     idrecond=""         # Si reconditionneur PRO, ID du PC chez ce reconditionneur
     origine=""          # Origine du PC ( ASF, Ecodair, Trira, ESN ... )  utilisation variable selon les sites
     bolcstatut=""       # statut dans le bolc
@@ -254,11 +254,14 @@ def ManualAdminInfosIHM(title,margin=2,spacing=2):
     Ztext(boxadmin,"La manière dont ces infos sont gérées dépend du site ...\nSur certains sites, elles sont facultatives ou préchargées manuellement dans le Bolc avant reconditionnement")
     hbox = Zhbox( boxadmin,2 ,0)
     Zentry(dialog, hbox, "idrecond" , "(PC venant d'un Reconditionneur PRO)\nID du PC chez le reconditionneur:","r")        
-    Zentry(dialog, hbox, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")   
+    Zentry(dialog, hbox, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")
 
-    boxbolc=Zvbox(vbox,2,2,"Transfert BOLC")
-    Ztext(boxbolc,"Si le PC n'a pas déjà été créé dans le Bolc, il faut fournir le N°du don auquel il est associé. Sinon l'import échouera")
-    Zentry(dialog,boxbolc , "iddon", "N° du don:","r")  
+    dest = f'{"tec.tech" if tectech_ else "BOLC"}'
+    nrequis = f'{"lot" if tectech_ else "don"}'
+    boxbolc=Zvbox(vbox,2,2,f"Transfert {dest}")
+    Ztext(boxbolc, f"Si le PC n'a pas déjà été créé dans {dest}, il faut fournir le N° du {nrequis}"
+                   " auquel il est associé. Sinon l'import échouera")
+    Zentry(dialog,boxbolc , "iddonlot", f"N° du {nrequis}:","r")
 
     boxactions= Zhbox(vbox,0,0)
     Zbutton(dialog, boxactions ,"QUIT", "ABANDON","Orange")
@@ -323,8 +326,10 @@ def MakeSendFiles(xfer=True):
 
 
     # Copie du rapport sur le Bureau et de DecouverteMonPC .  Le Bureau peut s'appeler Bureau ou Desktop
-    print(f"\nCopie du rapport d'audit sur le Bureau")
-    code=Copy2Desktop( [ filerapport , filefiche, filedouchette, DECOUVERTE , fileparental] )
+    # tobecopied = [ filerapport , filefiche, filedouchette, DECOUVERTE , fileparental]
+    tobecopied = [DECOUVERTE , fileparental]
+    print(f"\nCopie de {tobecopied} sur le bureau")
+    code=Copy2Desktop(tobecopied)
     if not code:
         print( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
 
@@ -338,7 +343,7 @@ def MakeSendFiles(xfer=True):
     with open( filebolc ) as f:
         bolcdata=f.read()
     with open( filebolcimport , "w" ) as f:
-        f.write( Admin.iddon + ";" + bolcdata)
+        f.write( Admin.iddonlot + ";" + bolcdata)
 
 
     # On rajoute le nom de fichier bolc dans le rapport pour audits.emmaus-connect.org
@@ -391,7 +396,8 @@ def MakeSendFiles(xfer=True):
         else:
             print(f"\n-------- envoi des infos du fichier bolc {filebolcimportbase}"
                   f' vers le serveur tec.tech ({"PROD" if useproapi_ else "TEST"}) ------------------')
-        TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_)
+            print(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
+        TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_, Admin.iddonlot, Admin.idrecond)
         print()
 
 
@@ -976,7 +982,7 @@ def ProcessAudit(mini=False,xfer=False):
     Admin.bolcstatut=result["bolcstatut"]
     Admin.idrecond=result["idrecond"]
     Admin.origine=result["origine"]
-    Admin.iddon=result["iddon"]
+    Admin.iddonlot=result["iddonlot"]
 
 
     print("\n----------------- Création et envoi des fichiers vers audits.emmaus-connect.org  et Bolc ----------------------")
@@ -1035,56 +1041,37 @@ if __name__ == '__main__':
     # sys.argv without striving for elegance or efficiency...
 
     # The accepted parameter list styles are:
-    #   python3 -B audit.py                      # [1] backward comptible with BOLC
-    #   python3 -B audit.py GRPC26-0043          # [2] backward comptible with BOLC
-    #   python3 -B audit.py             TECTECH [PROD|TEST] # [3] works with tec.tech (case-insensitive)
-    #   python3 -B audit.py GRPC26-0043 TECTECH [PROD|TEST] # [4] works with tec.tech (case-insensitive)
+    #   python3 -B audit.py                         # [1] id will we requested, TEST is implied
+    #   python3 -B audit.py GRPC26-0043             # [2] TEST is implied
+    #   python3 -B audit.py [PROD|TEST]             # [3] id will we requested
+    #   python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] works with tec.tech (case-insensitive)
 
     _logger.level = logging.DEBUG
     _logger.debug(sys.argv)
     prod_or_test_ = ["PROD", "TEST"]
     n_ = len(sys.argv) - 1
     nopc = None
-    useproapi_ = tectech_ = False
+    useproapi_ = False
+    tectech_ = True
     if n_ == 0:  # [1]
-        _logger.debug("Aucun paramètre ==> BOLC")
+        _logger.debug("Aucun paramètre ==> base TEST implicitement choisie")
         nopc = True
-    elif n_ == 1:  # [2]
-        _logger.debug("Un seul paramètre ==> BOLC + ce paramètre doit être un idEsn")
-        if sys.argv[1].lower() != 'tectech':  # [2]
+    elif n_ == 1:
+        _logger.debug("Un seul paramètre: soit un idEsn, soit PROD|TEST")
+        if sys.argv[1].upper() not in prod_or_test_:  # [2]
             Ecid().Init(sys.argv[1].upper())
             nopc = False
-        else:
-            _logger.error(f"Un parmi {'or'.join(prod_or_test_)} doit être précisé avec TECTECH")
-            sys.exit(1)
-    elif n_ == 2:  # [3]
-        _logger.debug("Deux paramètres ==> TECTECH sans idEsn")
-        if sys.argv[1].lower() == 'tectech' and sys.argv[2].upper() in prod_or_test_:
-            _logger.debug("case [3, TECTECH]")
-            nopc = True
-            tectech_ = True
+        else:  # [3]
+            _logger.debug("Uniquement choix PROD|TEST")
             useproapi_ = sys.argv[2].upper() == "PROD"
-        else:
-            _logger.error(f"On attend: TECTECH [PROD|TEST]")
-            sys.exit(1)
-    elif n_ == 3:  # [4]
-        _logger.debug(sys.argv)
-        if sys.argv[2].lower() == 'tectech' and sys.argv[3].upper() in prod_or_test_:
-            Ecid().Init(sys.argv[1].upper())
-            _logger.debug("case [4, TECTECH]")
-            nopc = False
-            tectech_ = True
-            useproapi_ = sys.argv[2].upper() == "PROD"
-        else:
-            _logger.error(f"On attend: idEsn TECTECH [PROD|TEST]")
-            sys.exit(1)
+    elif n_ == 2:  # [4]
+        _logger.debug("Deux paramètres ==> idEsn + PROD|TEST")
+        Ecid().Init(sys.argv[1].upper())
+        nopc = False
+        useproapi_ = sys.argv[2].upper() == "PROD"
     else:
         _logger.error("Paramètres incorrects. Abandon...")
         sys.exit(1)
-
-    if useproapi_:  # tant que les tests ne sont pas finis
-        _logger.warning("Encore en phase de test ==> le mode TEST forçé malgré votre demande.")
-        useproapi_ = False
 
     _logger.info(f"nopc = {nopc}")
     _logger.info(f"tectech_ = {tectech_}")

@@ -162,7 +162,7 @@ class Token:
 
 
 class TecTapiError(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg=""):
         super().__init__(msg)
 
 class TecTapiEquipmentNotFound(TecTapiError):
@@ -186,6 +186,14 @@ class TecTapiForbiddenEnumeratedValue(TecTapiError):
 class TecTapiBolcFileConversionError(TecTapiError):
     pass
 
+class TecTapiMissingMandatoryValueError(TecTapiError):
+    pass
+
+class TecTapiUsingIdOnEquipmentCreation(TecTapiError):
+    pass
+
+class TecTapiCreationFailed(TecTapiError):
+    pass
 
 class TecTAPI:
     __is_initialized = False
@@ -274,14 +282,16 @@ class TecTAPI:
 
         if nb == 0:
             errmsg = f'La recherche de {idmatrec} par idMaterielReconditionneur a échoué'
-            raise TecTapiEquipmentNotFound(errmsg)
+            # raise TecTapiEquipmentNotFound(errmsg)
+            _logger.warning(errmsg)
+            return {}
 
         # nb is certainly 1!
         return d['data'][0]
 
 
     @classmethod
-    def lookup_equipment_by_idesn(cls, idesn: str) -> dict:
+    def lookup_equipment(cls, idesn: str) -> dict:
         # look for a "materiel" in tec.tech, based only on idEsn
         epmateriel = "materiel"
         limit = 2
@@ -341,7 +351,7 @@ class TecTAPI:
         return ret.strip()
 
     @classmethod
-    def update_equipment_by_idesn(cls, mat: dict) -> dict:
+    def update_equipment(cls, mat: dict) -> dict:
         # This method updates an EXISTING equipment:
         #   -"mat" must contain at least a valid idEsn: if not the method raises an Exception
         #   -it also contains the <field, value> pairs that must be updated on the server side
@@ -358,7 +368,7 @@ class TecTAPI:
 
         # check that the equipment already exists
         try:
-            previous = cls.lookup_equipment_by_idesn(idesn)
+            previous = cls.lookup_equipment(idesn)
         except TecTapiError as exc:
             raise exc
 
@@ -391,8 +401,12 @@ class TecTAPI:
             with urllib.request.urlopen(req) as response:
                 body = response.read()
                 status = response.status
-        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
-            errmsg = f'La mise à jour de {idesn} a échoué ({exc})'
+        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            # _logger.error(errmsg)
+            raise TecTapiUpdateFailed(errmsg) from exc
+        except Exception as exc:
+            errmsg = f'La mise a jour de {idesn} a échoué ({exc})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg) from exc
 
@@ -422,7 +436,60 @@ class TecTAPI:
         #    of writing)
         #    .the method does not check thouroughly the "values" since their syntax is not very strictly defined
         #    at this time
-        return mat
+
+        # check that the mandatory fields are here
+        mandfields = {'idEsn', 'typeMateriel', 'idMaterielReconditionneur', 'statut', 'idStock', 'idLot', 'numeroSerie'}
+        if not mandfields < set(mat.keys()):
+            mandfieldvals = ', '.join ([f"{_}: {mat[_]}" for _ in mandfields])
+            errmsg = f"Au moins un champ obligatoire manque pour la création ({mandfieldvals})"
+            raise TecTapiMissingMandatoryValueError(errmsg)
+
+        # check that we are not accidentally updating an existing equipment
+        if 'id' in mat:
+            errmsg = f"On ne peut spécifier l'identifiant TECT lors d'une création {mat['id']}"
+            raise TecTapiUsingIdOnEquipmentCreation(errmsg)
+
+        # check the format of idEsn
+        idesn = mat['idEsn']
+        if not IdesnParser().parse(idesn):
+            errmsg = f"L'idEsn {idesn} est mal formé"
+            raise TecTapiBadIdesnFormat(errmsg)
+
+        maturl = f"{TecTAPI.__selected_prefix}/materiel"
+        headers = {
+            'Accept': 'application/json',
+            'Content-type': 'application/json',
+            'inclureGroupesLies': 'true',
+            'Authorization': f'Bearer {TecTAPI.__token}'
+        }
+
+        _logger.debug(mat)
+        if m := cls._check_enumerated_values(mat):
+            raise TecTapiForbiddenEnumeratedValue(m)
+
+        reqdata = [mat]
+        payload = json.dumps(reqdata).encode("utf-8")
+        _logger.debug(f"payload = >{payload}<")
+        req = urllib.request.Request(url=maturl, headers=headers, data=payload, method="PUT")
+        try:
+            with urllib.request.urlopen(req) as response:
+                body = response.read()
+                status = response.status
+        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+            errmsg = f'Erreur serveur lors de la création de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            # _logger.error(errmsg)
+            raise TecTapiCreationFailed(errmsg) from exc
+        except Exception as exc:
+            errmsg = f'La création de {idesn} a échoué ({exc})'
+            # _logger.error(errmsg)
+            raise TecTapiCreationFailed(errmsg) from exc
+
+        if status not in [201]:  # is 200 valid here?
+            errmsg = f'La création de {idesn} a échoué (status: {status})'
+            # _logger.error(errmsg)
+            raise TecTapiCreationFailed(errmsg)
+
+        return json.loads(body.decode("utf-8"))
 
 
 if __name__ == "__main__":
@@ -462,15 +529,33 @@ if __name__ == "__main__":
     _logger.info(f'créé le      : {api_.tokencreationtimestr}')
     _logger.info(f'se périme le : {api_.tokenexpirytimestr}')
 
-    mypc25_ = api_.lookup_equipment_by_idesn("GRPC25-0322")
-    mypc26_ = api_.lookup_equipment_by_idesn("GRPC26-1961")
+    pcpr_ = "GRPC26-9999"
+    grpc26_9999_ = api_.lookup_equipment(pcpr_)
+    if grpc26_9999_:
+        _logger.info(f"GRPC26-9999 existe déjà; on va faire une mise à jour")
+        mygrpc26_9999_ = api_.update_equipment(grpc26_9999_)
+    else:  # il s'agit d'une création
+        d_ = {'idLot': 'L-0048', 'idMaterielReconditionneur': 'EM_2602_9999', 'idEsn': pcpr_,
+              'typeMateriel': 'ORDINATEUR_PORTABLE', 'categorie': 'B', 'statut': 'PRET_A_DISTRIBUER', 'marque': 'APPLE',
+              'model': 'MacBookPro12,1', 'numeroSerie': 'C02SX6JJFVH4', 'processeur': 'Intel Core i5-5257U',
+              'typeDisqueDur1': 'SSD', 'tailleDisqueDur1': 251, 'RAM': 9, 'systemeExploitation': 'Linux',
+              'idStock': 'S-0094',
+              'commentaire': 'cpumark: 2837 / Batterie: 75.4% / Écran: 13.3 / Observations:  / PondTech: 0 / PondEsth: 0 / Bénévole: Gérard / Origine: ESN'}
+        ds_ = json.dumps([d_]).encode('utf-8')
 
+        mygrpc26_9999_ = api_.create_equipment(d_)
+        pass
+
+
+    mypc25_ = api_.lookup_equipment("GRPC25-0322")
+    mypc26_ = api_.lookup_equipment("MBPC26-0106")  #   "GRPC26-1961")
 
     fmt_ = "%Y-%m-%d %H:%M:%S"
     updtime_ = datetime.strftime(datetime.now(), fmt_)
     mypc26_["commentaire"] = f'Modified by PaulG on {updtime_}'
     idesn_ = mypc26_["idEsn"]
 
-    mynewpc_ = api_.update_equipment_by_idesn(mypc26_)
+    mynewpc_ = api_.update_equipment(mypc26_)
+
 
     sys.exit(0)
