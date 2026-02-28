@@ -109,7 +109,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         # 7: infos["Marque"],            # Marque: HP , Lenovo ...
         # on force la marque ZTE en cas de doute, car TECT n'autorise qu'une liste fermée de valeurs
         # en pratique, cela n'arrive que dans des conditions de test limitées (par exemple, avec une VM)
-        if v := vals[7].upper() in tectech_data.allowed_values['marque']:
+        if (v := vals[7].upper()) in tectech_data.allowed_values['marque']:
             d['marque'] = v
         else:
             d['marque'] = "ZTE"
@@ -191,10 +191,18 @@ if __name__ == "__main__":
     with open(args_.bolc_file, 'r') as bf:
         line = bf.readline().strip('\n')  # we carelessly read a single line and assume it is what we want
 
+    # basic test for test database
     vals_ = line.split(';')
+    idlot_ = "L-0048"
+    idMaterielReconditionneur_ = "EM_2510_0049"
+
+    # testing the bug signalled by Éric
+    vals_ = ['', '', 'MAPC26-2026', 'Portable', 'A', 'En reconditionnement', '', 'Dell', '', '', 'Latitude 5300', '65.5%', '', '', 'DJY3HW2', 'Intel Core i5-8265U', 'SSD', '256', '', '', '9', '', 'oui', '13.3', '0', '0', '5811', '', '', '28/02/2026 14:56:42', 'Linux: LMDE 7 Gigi', '', '', '', 'ESN']
+    idlot_ = "L-0670"
+    idmaterielreconditionneur_ = "MAPC26-2026"
 
     try:
-        d_ = from_bolc_to_tectech(vals_, "L-0048", "EM_2510_0049")
+        d_ = from_bolc_to_tectech(vals_, idlot_, idmaterielreconditionneur_)
     except(TecTapiBolcFileConversionError, Exception) as exc_:
         print(exc_)
         d_ = {}

@@ -1,3 +1,19 @@
+## 3.1.1
+
+- j'ai corrigé un bug signalé par Éric D.
+
+## 3.1.0
+
+- l'outil ne force plus le mode "*base de test*"
+
+- l'outil permet désormais de créer un nouveau matériel en précisant *idEsn* et *idLot*
+
+- voir ```README.md``` pour la façon d'appeler l'outil à partir de cette version
+
+- les messages d'erreur et de trace ont été améliorés
+
+- on ne met plus sur le bureau que ```DecouverteMonPC-Linux/*``` et ```LeControleParental.pdf```
+
 ## 3.0.4
 
 Bug corrigé:
@@ -25,5 +41,5 @@ Elle a plusieurs limites et défauts déjà identifiés:
 - ne permet d'agir que sur des matériels déjà présents danstec.tech
 - identifie un matériel par son seul 'idEsn' (pas encore par 'idMaterielReconditionneur')
 - manque un peu de verbosité (pouvant aider au debug en cette phase de test)
-	
+
 **N'oubliez pas de lire README.md...**
