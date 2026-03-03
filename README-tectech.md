@@ -8,6 +8,8 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 
 - l'outil permet, soit de créer un nouveau matériel, soit de modifier un matériel existant, le tout à partir des données d'audit générées par le code *historique* de Bernard
 
+- son unique vocation étant de faire de l'audit, l'outil ne permet pas de modifier certains attributs déjà déclarés dans la base tec.tech (```'id', 'idLot', 'idStock', 'idGroupe', 'reconditionneur', 'createdAt', 'updatedAt'```)
+
 - pour l'outil, l'identifiant utilisé pour désigner un matériel est toujours son "ID ESN" (```idEsn``` dans l'API tec.tech) conforme à la notation utilisée par l'outil dans le contexte BOLC. Par exemple: ```GRPC26-0888```
 
 - l'outil a subi les tests de base mais est encore jeune; il est fortement recommandé de lire les [notes d'évolution](https://audits.emmaus-connect.org/api/apps/linux/changelog/web) et de se familiariser avec l'outil sur la base tec.tech de test (voir ci-dessous)
@@ -31,7 +33,7 @@ tar xzf linux-x.y.z.tgz
 
 ## Première utilisation
 
-- se positionner dans le bon répertoire le bon répertoire
+- se positionner dans le bon répertoire
 
 ```cd audit-linux.x.y.z```
 
@@ -50,12 +52,12 @@ L'outil s'appelle directement avec le script ```audit.sh```. Le script ```menu.s
 
 Il y a ensuite plusieurs façons lancer l'audit, selon qu'on veut fournir l'*idEsn* sur la ligne de commande et selon qu'on choisit d'accéder à la base de tec.tech de test ([https://tec-tech.osc-fr1.scalingo.io](https://tec-tech.osc-fr1.scalingo.io)) ou celle de prod ([https://tec-tech-prod.osc-fr1.scalingo.io](https://tec-tech-prod.osc-fr1.scalingo.io))
 
-Les différentes façons d'appeler l'outils sont (on prend l'*idEsn* ```GRPC26-0043``` comme exemple):
+Les différentes façons d'appeler l'outil sont (on prend l'*idEsn* ```GRPC26-0043``` comme exemple):
 ```
-sudo bash python3 -B audit.py                         # [1] idEsn sera demandé, la base de test est choisie
-sudo bash python3 -B audit.py GRPC26-0043             # [2] la base de test est choisie
-sudo bash python3 -B audit.py [PROD|TEST]             # [3] idEsn sera deamndé
-sudo bash python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] idEsn et la base sont explicitement désignés
+sudo bash audit.sh                         # [1] idEsn sera demandé, la base de PROD est choisie
+sudo bash audit.sh GRPC26-0043             # [2] la base de PROD est choisie
+sudo bash audit.sh [PROD|TEST]             # [3] idEsn sera demandé et la base est explicitement désignée
+sudo bash audit.sh GRPC26-0043 [PROD|TEST] # [4] idEsn et la base sont explicitement désignés
 ```
 
 Lors de l'audit, si l'équipement existe déjà dans tec.tech, l'outil le met à jour, sinon, il le crée, le tout avec les données collectées lors de l'audit.
@@ -66,7 +68,9 @@ Pour mémoire, les idEsn doivent se conformer au modèle:
 ```
 
 ## Notes importantes
-- les paramètres sont convertis en majuscules avant exécution
+
+- les paramètres sont convertis en majuscules avant exploitation
+
 - les gestionnaires de tec.tech demandent à ce qu'on économise les jetons d'accès à la base; pour cela, l'outil stocke le jeton qu'il a acquis dans un fichier local ```token-test.json``` (ou ```token-prod.json```) puis l'utilise tant qu'il est valide; il est donc important que l'outil puisse écrire dans le répertoire ou se trouve audit.sh
 
 

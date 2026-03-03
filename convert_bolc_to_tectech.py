@@ -1,4 +1,5 @@
 import sys
+import platform
 import argparse
 import json
 
@@ -109,7 +110,10 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         # 7: infos["Marque"],            # Marque: HP , Lenovo ...
         # on force la marque ZTE en cas de doute, car TECT n'autorise qu'une liste fermée de valeurs
         # en pratique, cela n'arrive que dans des conditions de test limitées (par exemple, avec une VM)
-        if (v := vals[7].upper()) in tectech_data.allowed_values['marque']:
+        v = vals[7]
+        if v == "Hewlett-Packard":
+            v = "HP"
+        if v.upper() in tectech_data.allowed_values['marque']:
             d['marque'] = v
         else:
             d['marque'] = "ZTE"
@@ -166,6 +170,8 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         d['commentaire'] = f"cpumark: {vals[26]} / Batterie: {vals[11]} / Écran: {vals[23]}"
         d['commentaire'] += f" / Observations: {vals[13]} / PondTech: {vals[24]} / PondEsth: {vals[25]}"
         d['commentaire'] += f" / Bénévole: {vals[28]} / Origine: {vals[34]}"
+        d['commentaire'] += f" / {platform.freedesktop_os_release()['PRETTY_NAME']}"
+
 
     except (TecTapiBolcFileConversionError, Exception) as exc:
         raise TecTapiBolcFileConversionError(exc.__repr__()) from exc

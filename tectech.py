@@ -2,16 +2,21 @@ import os
 import sys
 import json
 import urllib.request, urllib.error
+import http.client
 import argparse
 import logging
 from datetime import datetime, timedelta
 import re
+import csv
 import tectech_data
+
+# http.client.HTTPConnection.debuglevel = 1
 
 UNIQUESHA1 = "2999a9e7680a2fa2a152d65dbd43be43f9c7e03e"
 
 PREPRODAPIURL = "https://tec-tech.osc-fr1.scalingo.io/api"
 PRODAPIURL = "https://tec-tech-prod.osc-fr1.scalingo.io/api"
+USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 
 
 _logger = logging.getLogger("tectech")
@@ -195,6 +200,9 @@ class TecTapiUsingIdOnEquipmentCreation(TecTapiError):
 class TecTapiCreationFailed(TecTapiError):
     pass
 
+class TecTapiCsvFileCreationFailed(TecTapiError):
+    pass
+
 class TecTAPI:
     __is_initialized = False
     __token = ""
@@ -208,7 +216,11 @@ class TecTAPI:
         'createdAt', 'updatedAt', 'reconditionneur'}
     __ro_fields = {'id', 'idLot', 'idStock', 'idGroupe', 'reconditionneur', 'createdAt', 'updatedAt'}
     __updatable_fields = __fields - __ro_fields
-
+    __commonheaders = {
+        'Accept': 'application/json',
+        'Content-type': 'application/json',
+        'User-Agent' : f'{USERAGENT}'
+    }
 
     @property
     def token(self):
@@ -249,12 +261,7 @@ class TecTAPI:
         epmateriel = "materiel"
         limit = 2
         maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idMaterielReconditionneur={idmatrec}&page=1&limit={limit}"
-        headers = {
-            'Accept': 'application/json',
-            'Content-type': 'application/json',
-            'inclureGroupesLies': 'true',
-            'Authorization': f'Bearer {TecTAPI.__token}'
-        }
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
         req = urllib.request.Request(url=maturl, headers=headers, method="GET")
         try:
             with urllib.request.urlopen(req) as response:
@@ -296,12 +303,7 @@ class TecTAPI:
         epmateriel = "materiel"
         limit = 2
         maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idEsn={idesn}&page=1&limit={limit}"
-        headers = {
-            'Accept': 'application/json',
-            'Content-type': 'application/json',
-            'inclureGroupesLies': 'true',
-            'Authorization': f'Bearer {TecTAPI.__token}'
-        }
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
         req = urllib.request.Request(url=maturl, headers=headers, method="GET")
         try:
             with urllib.request.urlopen(req) as response:
@@ -378,12 +380,7 @@ class TecTAPI:
                 raise TecTapiReadOnlyField(f'Mise à jour du champ {f} interdite')
 
         maturl = f"{TecTAPI.__selected_prefix}/materiel"
-        headers = {
-            'Accept': 'application/json',
-            'Content-type': 'application/json',
-            'inclureGroupesLies': 'true',
-            'Authorization': f'Bearer {TecTAPI.__token}'
-        }
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
 
         matup = {x: mat[x] for x in mat if x == 'id' or (mat[x] and x not in TecTAPI.__ro_fields)}
 
@@ -456,12 +453,7 @@ class TecTAPI:
             raise TecTapiBadIdesnFormat(errmsg)
 
         maturl = f"{TecTAPI.__selected_prefix}/materiel"
-        headers = {
-            'Accept': 'application/json',
-            'Content-type': 'application/json',
-            'inclureGroupesLies': 'true',
-            'Authorization': f'Bearer {TecTAPI.__token}'
-        }
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
 
         _logger.debug(mat)
         if m := cls._check_enumerated_values(mat):
@@ -490,6 +482,53 @@ class TecTAPI:
             raise TecTapiCreationFailed(errmsg)
 
         return json.loads(body.decode("utf-8"))
+
+    @classmethod
+    def create_tectech_csvfile(cls, mat: dict, destfile: str):
+        # trustfully assume that 'dest' can be (over)written, focus on the data
+        # some fields must be removed from 'mat', others must be tweaked
+        _logger.info(f"Écriture de {destfile} en cours")
+        try:
+            if isinstance(mat['statut'], dict):
+                mat['statut'] = mat['statut']['libelle']
+                pass
+            mat['webcam'] = "OUI" if mat['webcam'] else "NON"
+            mat['lecteurDVD'] = "OUI" if mat['lecteurDVD'] else "NON"
+            d = {tectech_data.internal_to_external_fnames[_]: mat[_] for _ in
+                 ['typeMateriel',
+                  'idMaterielReconditionneur',
+                  'statut',
+                  'idStock',
+                  'numeroSerie',
+                  'IMEI1',
+                  'IMEI2',
+                  'idEsn',
+                  'model',
+                  'marque',
+                  'processeur',
+                  'typeDisqueDur1',
+                  'tailleDisqueDur1',
+                  'typeDisqueDur2',
+                  'tailleDisqueDur2',
+                  'RAM',
+                  'systemeExploitation',
+                  'categorie',
+                  'lecteurDVD',
+                  'webcam',
+                  'commentaire'
+                  ]
+                 }
+            with open(destfile, 'w', encoding='utf-8') as csvfile_:
+                fieldnames = list(d.keys())
+                writer = csv.DictWriter(csvfile_, fieldnames=fieldnames, delimiter=',')
+                writer.writeheader()
+                writer.writerow(d)
+            _logger.info(f"Écriture de {destfile} terminée")
+        except Exception as exc:
+            errmsg = f"La création du fichier CSV a échoué ({exc})"
+            raise TecTapiCsvFileCreationFailed(errmsg) from exc
+
+        return
 
 
 if __name__ == "__main__":
@@ -529,6 +568,20 @@ if __name__ == "__main__":
     _logger.info(f'créé le      : {api_.tokencreationtimestr}')
     _logger.info(f'se périme le : {api_.tokenexpirytimestr}')
 
+    fmt_ = "%Y-%m-%d %H:%M:%S"
+    updtime_ = datetime.strftime(datetime.now(), fmt_)
+
+    pc26_ = "MAPC26-2026"  #"MBPC26-0106"
+    mypc26_ = api_.lookup_equipment(f"{pc26_}")
+    if mypc26_:
+        # we need to fo through a modification to get a clean dictionary, ready to generate teh CSV file
+        mypc26_["commentaire"] = f'Modified by PaulG on {updtime_}'
+        mypc26_["idEsn"] = pc26_
+        mynewpc26_ = api_.update_equipment(mypc26_)
+        api_.create_tectech_csvfile(mynewpc26_[0], f"{pc26_}.tect.csv")
+
+    pass
+
     pcpr_ = "GRPC26-9999"
     grpc26_9999_ = api_.lookup_equipment(pcpr_)
     if grpc26_9999_:
@@ -549,13 +602,6 @@ if __name__ == "__main__":
 
     mypc25_ = api_.lookup_equipment("GRPC25-0322")
     mypc26_ = api_.lookup_equipment("MBPC26-0106")  #   "GRPC26-1961")
-
-    fmt_ = "%Y-%m-%d %H:%M:%S"
-    updtime_ = datetime.strftime(datetime.now(), fmt_)
-    mypc26_["commentaire"] = f'Modified by PaulG on {updtime_}'
-    idesn_ = mypc26_["idEsn"]
-
-    mynewpc_ = api_.update_equipment(mypc26_)
 
 
     sys.exit(0)

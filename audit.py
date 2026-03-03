@@ -397,7 +397,8 @@ def MakeSendFiles(xfer=True):
             print(f"\n-------- envoi des infos du fichier bolc {filebolcimportbase}"
                   f' vers le serveur tec.tech ({"PROD" if useproapi_ else "TEST"}) ------------------')
             print(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
-        TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_, Admin.iddonlot, Admin.idrecond)
+        TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_, Admin.iddonlot, Admin.idrecond,
+                               Admin.ECID)
         print()
 
 
@@ -1041,8 +1042,8 @@ if __name__ == '__main__':
     # sys.argv without striving for elegance or efficiency...
 
     # The accepted parameter list styles are:
-    #   python3 -B audit.py                         # [1] id will we requested, TEST is implied
-    #   python3 -B audit.py GRPC26-0043             # [2] TEST is implied
+    #   python3 -B audit.py                         # [1] id will we requested, PROD is implied
+    #   python3 -B audit.py GRPC26-0043             # [2] PROD is implied
     #   python3 -B audit.py [PROD|TEST]             # [3] id will we requested
     #   python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] works with tec.tech (case-insensitive)
 
@@ -1051,10 +1052,10 @@ if __name__ == '__main__':
     prod_or_test_ = ["PROD", "TEST"]
     n_ = len(sys.argv) - 1
     nopc = None
-    useproapi_ = False
+    useproapi_ = True
     tectech_ = True
     if n_ == 0:  # [1]
-        _logger.debug("Aucun paramètre ==> base TEST implicitement choisie")
+        _logger.debug("Aucun paramètre ==> base PROD implicitement choisie")
         nopc = True
     elif n_ == 1:
         _logger.debug("Un seul paramètre: soit un idEsn, soit PROD|TEST")
@@ -1063,7 +1064,7 @@ if __name__ == '__main__':
             nopc = False
         else:  # [3]
             _logger.debug("Uniquement choix PROD|TEST")
-            useproapi_ = sys.argv[2].upper() == "PROD"
+            useproapi_ = sys.argv[1].upper() == "PROD"
     elif n_ == 2:  # [4]
         _logger.debug("Deux paramètres ==> idEsn + PROD|TEST")
         Ecid().Init(sys.argv[1].upper())

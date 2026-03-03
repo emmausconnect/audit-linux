@@ -25,3 +25,27 @@ allowed_values = {
                "PHILIPS", "RAZER", "REALME", "SAGEM", "SAMSUNG", "SCHNEIDER", "SONY", "THOMSON", "TOSHIBA", "VIEWSONIC",
                "VIVO", "WESTERN DIGITAL", "WHEATEK", "WIKO", "WINCOR", "WORTMANN", "XIAOMI", "ZTE"}}
 
+
+internal_to_external_fnames = {
+    'typeMateriel': 'Type de matériel',
+    'idMaterielReconditionneur': 'ID du matériel chez le reconditionneur',
+    'statut': 'Statut',
+    'idStock': 'ID du stock',
+    'numeroSerie': 'Numero de serie',
+    'IMEI1': 'IMEI 1',
+    'IMEI2': 'IMEI 2',
+    'idEsn': 'ID ESN',
+    'model': 'Modèle',
+    'marque': 'Marque',
+    'processeur': 'Processeur',
+    'typeDisqueDur1': 'Type disque dur 1',
+    'tailleDisqueDur1': 'Taille disque dur 1',
+    'typeDisqueDur2': 'Type disque dur 2',
+    'tailleDisqueDur2': 'Taille disque dur 2',
+    'RAM': 'RAM',
+    'systemeExploitation': "Système d'exploitation",
+    'categorie': 'Catégorie',
+    'lecteurDVD': 'Lecteur DVD',
+    'webcam': 'Webcam',
+    'commentaire': 'Commentaire'
+}

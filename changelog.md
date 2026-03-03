@@ -1,3 +1,16 @@
+### Généralités
+
+*N'oubliez pas de lire le fichier ```README.pdf```*
+
+
+## 3.2.0
+
+- c'est désormais **la base PROD qui est sélectionnée par défaut** (demande de Éric D.)
+
+- un fichier CSV compatible TECT est créé à côté des autres fichiers d'audit (demande de Charles M.)
+
+- la version de la distribution Linux est ajoutée au champ "commentaire" (demande de Philippe R.)
+
 ## 3.1.1
 
 - j'ai corrigé un bug signalé par Éric D.
@@ -41,5 +54,3 @@ Elle a plusieurs limites et défauts déjà identifiés:
 - ne permet d'agir que sur des matériels déjà présents danstec.tech
 - identifie un matériel par son seul 'idEsn' (pas encore par 'idMaterielReconditionneur')
 - manque un peu de verbosité (pouvant aider au debug en cette phase de test)
-
-**N'oubliez pas de lire README.md...**

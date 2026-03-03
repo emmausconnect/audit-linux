@@ -10,7 +10,7 @@ import http.client
 
 import tectech
 from convert_bolc_to_tectech import from_bolc_to_tectech
-
+# from audit import Admin
 
 
 upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -310,7 +310,7 @@ def TransfertBolc(filebolcimport="",debug=False):
     if ( code == 0 ) : print("******** Transfert BOLC OK **************")
 
 
-def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = ""):
+def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = "", ecid: str= ""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
     print("=== Transfert à faire vers tec.tech===")
@@ -353,7 +353,7 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
             mynewpc = api.update_equipment(d)
         except Exception as exc:
             print(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc}")
+        print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         print(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
         d = from_bolc_to_tectech(vals, idlot=idlot, idmaterielreconditionneur=idmatrecond)
@@ -364,17 +364,26 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
             mynewpc = api.create_equipment(d)
         except Exception as exc:
             print(f"La création de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel équipement {vals[2]} créé dans tec.tech:\n{mynewpc}")
+        print(f"Nouvel équipement {vals[2]} créé dans tec.tech:\n{mynewpc[0]}")
+
+    # we trustfully use the existing naming scheme...
+    dest = os.path.join("..", ecid, f"{ecid}.tect.csv")
+    try:
+        api.create_tectech_csvfile(mynewpc[0], dest)
+    except Exception as exc:
+        print(f"La création de {dest} a échoué ({exc})")
+    # else:
+    #     print(f"{dest} aurait dû être créé...")
 
     print("=== Transfert vers tec.tec terminé ===")
     return
 
 
-def TransfertVersBaseAdmin(filebolcimport="", debug=False, tect: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = ""):
+def TransfertVersBaseAdmin(filebolcimport="", debug=False, tect: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = "", ecid: str= ""):
     if not tect:
         TransfertBolc(filebolcimport, debug)
     else:
-        TransfertTectech(filebolcimport, debug, useprodapi, idlot, idmatrecond)
+        TransfertTectech(filebolcimport, debug, useprodapi, idlot, idmatrecond, ecid)
 
 
 
