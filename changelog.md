@@ -3,6 +3,10 @@
 *N'oubliez pas de lire le fichier ```README.pdf```*
 
 
+## 3.2.1
+
+- j'ai corrigé un bug signalé par Éric D. (et relatif aux "marques")
+
 ## 3.2.0
 
 - c'est désormais **la base PROD qui est sélectionnée par défaut** (demande de Éric D.)

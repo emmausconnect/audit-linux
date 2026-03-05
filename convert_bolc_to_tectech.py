@@ -114,7 +114,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         if v == "Hewlett-Packard":
             v = "HP"
         if v.upper() in tectech_data.allowed_values['marque']:
-            d['marque'] = v
+            d['marque'] = v.upper()
         else:
             d['marque'] = "ZTE"
         # 10: infos["Modele"],            # Modele ...
