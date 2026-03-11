@@ -1,8 +1,19 @@
 ### Généralités
 
-*N'oubliez pas de lire le fichier ```README.pdf```*
+*N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous 😃*
 
+## 3.2.2
 
+- la recherche de la "note CPU" se fait désormais via l'URL dédiée https://audits.emmaus-connect.org/api/cpu/CPUSTR (cette recherche a un taux de réussite proche de 100%)
+
+- les tailles de RAM et de disque sont désormais rapportées dans les unités communément utilisées:
+
+  - GiB (Gio) pour la RAM ==> plus de PC avec 9 ou 17 *gigas* de RAM
+
+  - GB (Go) pour les disques ==> un disque vendu comme faisant *500 gigas* apparaîtra avec cette taille dans l'audit
+
+- le README a été enrichi d'un nouveau paragraphe et amélioré pour l'existant
+	
 ## 3.2.1
 
 - j'ai corrigé un bug signalé par Éric D. (et relatif aux "marques")

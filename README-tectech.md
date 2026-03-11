@@ -40,11 +40,13 @@ tar xzf linux-x.y.z.tgz
 - y créer un fichier nommé ```tectech-credentials.json``` avec votre éditeur favori et y placer les données suivantes:
 ```
 {
-    "client_id": "UbBdc5bp***********KaS57mQwIleVm",
-    "client_secret": "5uSXDqTZbOUoQ42N9jkIiyW**************YH3N5wOn-YCVBah0F7iVHrHMCnX"
+    "client_id":     " *valeur à demander à l'équipe tec.tech* ",
+    "client_secret": " *valeur à demander à l'équipe tec.tech* "
 }
 ```
-en respectant scrupuleusement la syntaxe.
+en respectant scrupuleusement la syntaxe (notamment les guillemets et la virgule en fin de la ligne ```client_id```)
+
+Les valeurs de ```client_id``` et de ```client_secret``` sont propres à chaque ESN et doivent être obtenues auprès de l'équipe tec.tech.
 
 ## Utilisations ultérieures
 
@@ -66,6 +68,34 @@ Pour mémoire, les idEsn doivent se conformer au modèle:
 ```
 ^(BX|CR|GR|LI|LV|LY|MA|MB|RO|SD|ST|VI)(PC|TA)(\\d{2})-(\\d{4})$
 ```
+
+## Modification d'un matériel existant v/s création d'un nouveau matériel
+
+L'outil d'audit ne sait faire des recherches qu'avec l'identifiant *eePCaa-nnnn* qu'on lui donne en paramètre (```GRPC26-0043``` est pris ici comme exemple).
+
+De ma compréhension actuelle de tec.tech, pour un PC:
+
+- reconditionné par un pro: ```idMaterielReconditionneur``` contient l'identifiant attribué par le pro,
+- reconditionné par l'ESN: ```idMaterielReconditionneur``` contient l'identifiant *eePCaa-nnnn*, attribué par l'ESN.
+
+Dans tous les cas, pour tec.tech, ```idEsn``` est un champ libre, que nous (bénévoles reconditionneurs) utilisons comme identifiant unique. Autrement dit, pour nous, ```idEsn``` est une valeur conforme à la syntaxe *eePCaa&#x2011;nnnn* et unique dans tec.tech, alors que pour tec.tech, ce champ n'est nullement contraint.
+
+Dans notre exemple, l'outil d'audit cherche donc le PC d'abord par le ```idEsn=GRPC26-0043``` puis, en cas d'échec, par ```idMaterielReconditionneur=GRPC26-0043```.
+
+- s'il trouve, tout va bien: il s'agit de la modification d'un équipement déjà déclaré dans tec.tech,
+
+- s'il ne trouve pas:
+
+  - si on a donné un numéro de lot, il considère que c'est une création et il la réalise,
+
+  - sinon, il ne fait rien
+
+Ça marche très bien si le référent déclare les PC par leur ```idEsn``` avant de les mettre entre les mains des bénévoles pour l'audit (procédure appliquée notamment à Grenoble).
+
+Ça marche assez bien si le référent déclare au moins le lot. Comme vu ci-dessus, l'outil d'audit sait créer des matériels dans tec.tech à partir des deux infos: ```idLot``` et ```idEsn```.
+
+De façon générale, à ma connaissance, le notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, à l'heure où j'écris, il existe, dans tec.tech de nombreux doublons avec plusieurs matériels (*ID* différents) ayant les mêmes ```idMaterielReconditionneur+numeroSerie```…
+
 
 ## Notes importantes
 

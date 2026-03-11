@@ -11,6 +11,8 @@
 ##################################################################################
 
 import os
+import subprocess
+import re
 import sys
 
 from common import *
@@ -34,8 +36,13 @@ infos={}  # donnees technique issues du scan systeme
 #------------------------------------------
 def SystemScan(inxifile):
 
-    cmd=f"(sudo    inxi -F -xx -y1) > {inxifile}"
-    os.system(cmd)
+    # cmd=f"(sudo    inxi -F -xx -y1) > {inxifile}"
+    # os.system(cmd)
+    result = subprocess.run(["sudo", "inxi", "-F", "-xx", "-y1", "--color", "0"], capture_output=True, text=True)
+    with open(f"{inxifile}", "w") as f:
+        f.write(result.stdout)
+
+    pass
 
 
 #------------------------------------------
@@ -229,7 +236,13 @@ def AnalyzeInxi():
     # Memoire : suivant la version,  se trouve dans Memory ou Memory/total
     ram=InxiValue("Info/Memory")
     if ram == "" : ram=InxiValue("Info/Memory/total")
-    infos["RAM"]= round( DecodeNumber( ram ) )
+    # print(f"ram = {ram}")
+    if m := re.match(r'^(?P<siz>(\d+))\s+(?P<unt>(GiB|Gio))', ram, re.IGNORECASE):
+        infos['RAM'] = int(m['siz'])
+    else:
+        # fallback: legacy code
+        infos["RAM"]= round( DecodeNumber( ram ) )
+    # print(f"infos['RAM'] = {infos['RAM']}")
 
     # Batterie:    "condition": "73.3/80.0 Wh (91.6%) 
     # on  récupère le pourcentage residuel  
@@ -285,7 +298,9 @@ def AnalyzeInxi():
 
             # ajouter la taille disque
             s=InxiDataValue( elem["size"] )
-            sizedisk=sizedisk + DecodeNumber( s )
+            print(f"partial sizedisk = {DecodeNumber(s)} GB/Go")
+            # we want to keep disk sizes in GB (not GiB) because that's how they are advertised
+            sizedisk = sizedisk + round(DecodeNumber(s))
 
             # si le disque est nvme , on a une pattern comme id=/dev/nvme0n1
             if diskid.find("nvme") > -1 :
@@ -295,7 +310,8 @@ def AnalyzeInxi():
             if "model" in elem:
                 typedisk.append( InxiDataValue(elem["model"]) )
 
-    infos["DisqueTaille"]=round(sizedisk)
+    print(f"sizedisk = {sizedisk} GB/Go")
+    infos["DisqueTaille"] = sizedisk  # round(sizedisk)
     infos["DisqueRef"]= ",".join(typedisk)
     infos["DisqueID"]=diskid
 
@@ -365,3 +381,8 @@ def CopyDir( src, dstdir):
 def ConvertFile(name):
     return name
 
+
+if  __name__ == "__main__":
+    infos_ = AuditMe()
+
+    sys.exit(0)

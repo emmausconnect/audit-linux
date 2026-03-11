@@ -25,7 +25,7 @@ import time
 
 # fichiers include
 from  outils import *  
-from cpumark import *
+from cpumark import FindCpuMark
 from categorie import *
 
 import logging
@@ -908,13 +908,11 @@ def ProcessAudit(mini=False,xfer=False):
 
     #print(infos)
 
-    # Recherche du CPUmark dans le fichier csv
-    #infos["Processeur"]= "13th Gen Intel (RR) Core i5-3439Y @ 1.50GHz"  #### TEST
-    #infos["Processeur"]= "13th Gen Intel (R) Core i5-3439Y @ 1.50GHz"  #### TEST
-    #infos["Processeur"]="Intel Core i5 M 520"  ##### test
-    print(f"\n----------------- Recherche du processeur dans {CSVCPU} ----------------------")
-    (cpumark,cpufound,trace) = FindCPUMARK(CSVCPU,infos["Processeur"] )
-    print(trace)
+    # Recherche de la note CPU
+    proc = infos["Processeur"]
+    print(f"\n----------------- Recherche de la note du processeur {proc} ----------------------")
+    cpumark = FindCpuMark(proc)
+    print(f"La note >{cpumark}< a été trouvée pour {proc}")
 
     # Saisie d'infos complémentaires, y compris le cpumark si pas trouvé
     print("\n------------ Saisie manuelle d'informations --------------------")

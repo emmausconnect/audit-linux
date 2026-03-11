@@ -41,10 +41,10 @@ cd $dir
 # possible argument choice are over: equipment id and TEST|PROD instance of tec.tech
 # The acceptable parameter list styles are now:
 # (all parameters are case-insensitive and will be converted to uppercase)
-#   python3 -B audit.py                         # [1] id will we requested, TEST is implied
-#   python3 -B audit.py GRPC26-0043             # [2] TEST is implied
-#   python3 -B audit.py [PROD|TEST]             # [3] id will we requested
-#   python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] works with tec.tech (case-insensitive)
+#   sudo bash audit.sh                         # [1] idEsn sera demandé, la base de PROD est choisie
+#   sudo bash audit.sh GRPC26-0043             # [2] la base de PROD est choisie
+#   sudo bash audit.sh [PROD|TEST]             # [3] idEsn sera demandé et la base est explicitement désignée
+#   sudo bash audit.sh GRPC26-0043 [PROD|TEST] # [4] idEsn et la base sont explicitement désignés
 
 # left as it was but why not:
 #   python3 -B audit.py $*
