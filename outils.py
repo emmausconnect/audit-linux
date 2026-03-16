@@ -340,7 +340,8 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
 
     if mypc:  # mise à jour d'équipement
         print(f"Équipement {vals[2]} trouvé:\n{mypc}")
-        d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
+        d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idStock=mypc['idStock'],
+                                 idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
         d['id'] = mypc['id']
         print(f"Dictionnaire à envoyer à tec.tech\n{d}")
 
@@ -356,7 +357,7 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
         print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         print(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
-        d = from_bolc_to_tectech(vals, idlot=idlot, idmaterielreconditionneur=idmatrecond)
+        d = from_bolc_to_tectech(vals, idlot=idlot, idStock="", idmaterielreconditionneur=idmatrecond)
         print(f"Dictionnaire à envoyer à tec.tech\n{d}")
         mynewpc = {}
         try:

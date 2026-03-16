@@ -45,7 +45,7 @@ from tectech import TecTapiBolcFileConversionError
 # [('tailleDisqueDur1', {'type': 'number', 'nullable': True}), ('tailleDisqueDur2', {'type': 'number', 'nullable': True}), ('RAM', {'type': 'number', 'nullable': True})]
 
 
-def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str) -> dict:
+def from_bolc_to_tectech(vals: list, idlot: str, idStock: str, idmaterielreconditionneur: str) -> dict:
     # From a file that was ready to send to BOLC, create a dictionary suitable for updating a "materiel" on tec.tech
     # A BOLC-style file contains a single CSV line with 35 fields, like:
     # 3337;;GRPC26-0008;Portable;B;Prêt à vendre;;Apple;;;MacBookPro12,1;75.4%;;;C02SX6JJFVH4;Intel Core i5-5257U;SSD;251;;;9;;;13.3;0;0;2837;;Rudy;26/01/2026 15:17:45;Linux: Linux Mint 22.2 Zara;;;;ESN
@@ -162,9 +162,12 @@ def from_bolc_to_tectech(vals: list, idlot: str, idmaterielreconditionneur: str)
         # 34: Admin.origine               # Origine du reconditionnement: utilisation diverse selon les sites
 
         # at this stage, we have 'idStock' and 'commentaire' to fill up
-        d['idStock'] = esn_to_idstock.get(vals[2][0:2])
-        if not d['idStock']:
-            raise
+        if idStock:
+            d['idStock'] = idStock
+        else:
+            d['idStock'] = esn_to_idstock.get(vals[2][0:2])
+            if not d['idStock']:
+                raise
 
         # 'commentaire' will hold some of the BOLC fields that fit nowhere in tec.tech structure
         d['commentaire'] = f"cpumark: {vals[26]} / Batterie: {vals[11]} / Écran: {vals[23]}"

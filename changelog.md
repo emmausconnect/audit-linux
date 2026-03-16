@@ -1,6 +1,11 @@
 ### Généralités
 
-*N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous 😃*
+*N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous, lors de la 3.2.2 😃*
+
+## 3.2.3
+
+- j'ai corrigé un bug signalé par Antoine H.: l'outil tentait à tort de modifer l'```idStock``` d'un matériel existant. Pour un matériel à créer, l'outil déduit la valeur de ```idStock``` à partir des deux premières lettres de ```idEsn```.
+
 
 ## 3.2.2
 
@@ -13,7 +18,7 @@
   - GB (Go) pour les disques ==> un disque vendu comme faisant *500 gigas* apparaîtra avec cette taille dans l'audit
 
 - le README a été enrichi d'un nouveau paragraphe et amélioré pour l'existant
-	
+
 ## 3.2.1
 
 - j'ai corrigé un bug signalé par Éric D. (et relatif aux "marques")
