@@ -13,7 +13,7 @@ import json
 #  1 GB  = 1000 * 1000 * 1000 bytes
 #  1 GiB = 1024 * 1024 * 1024 bytes = 1.0737 GB
 #----------------------------------------------------------
-def DecodeNumber(s):
+def unusedDecodeNumber(s):
     s=s.upper()
     s=s.replace("," , ".")  
     # on ne prend que la 1e partie dans 45.78 GiB  

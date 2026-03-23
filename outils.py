@@ -6,12 +6,15 @@
 import re,sys,os
 import json
 import zipfile
-import http.client
+import http.client  # actually no longer used
+import urllib.request, urllib.error
 
 import tectech
 from convert_bolc_to_tectech import from_bolc_to_tectech
 # from audit import Admin
 
+ECAPPSAPIURL = "https://audits.emmaus-connect.org/api"
+USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 
 upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -184,7 +187,7 @@ def TestsUnitaires(txt):
 #
 # renvoie le contenu ou "" si pas trouvé
 #--------------------------------------------------------------------  
-def Download( host , uri ,outfile=""):
+def unusedDownload( host , uri ,outfile=""):
     if os.path.isfile( outfile) : os.remove( outfile)
     data=""
 
@@ -211,6 +214,37 @@ def Download( host , uri ,outfile=""):
         return ""
 
 
+def DownloadFile(url: str, afile: str, siz: int) -> str:
+    headers = {
+        # 'Accept': 'application/json',
+        # 'Content-type': 'application/json',
+        'User-Agent' : f'{USERAGENT}'
+    }
+    req = urllib.request.Request(url=url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req) as response:
+            body = response.read()
+            status = response.status
+    except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+        errmsg = f'Le téléchargement de la dernière version a échoué ({exc})'
+        return errmsg
+    if status != 200:
+        errmsg = f'Le téléchargement de la dernière version a échoué (status={status})'
+        return errmsg
+    if len(body) != siz:
+        errmsg = "Le fichier téléchargé de la dernière version n'a pas la bonne taille"
+        errmsg += f" (attendue: {siz}, obtenue: {len(body)})"
+        return errmsg
+
+    try:
+        with open(afile, 'wb') as of:
+            of.write(body)
+    except Exception as exc:
+        errmsg = f"La sauvegarde de la dernière version a échoué ({exc})"
+        return errmsg
+
+    return "SUCCESS"
+
 
 #------------------------------------------------------------------
 # Lit le N° de version 
@@ -232,15 +266,39 @@ def GetLocalVersion():
 
     return version
 
-def GetRemoteVersion():
-    data = Download( "audits.emmaus-connect.org", "/api/apps/linux/latest"  )
+def unusedGetRemoteVersion():
+    data = unusedDownload( "audits.emmaus-connect.org", "/api/apps/linux/latest"  )
     if data == "" : return ""
     items=json.loads(data)
     return items.get("version","")
 
+
+def GetRemoteVersionInfo() -> (str, str, str, int):
+    defret = "", "", "", 0
+    vinfourl = f"{ECAPPSAPIURL}/apps/linux/latest"
+    headers = {
+        'Accept': 'application/json',
+        'Content-type': 'application/json',
+        'User-Agent' : f'{USERAGENT}'
+    }
+    req = urllib.request.Request(url=vinfourl, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req) as response:
+            body = response.read()
+            status = response.status
+    except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+        print(f'La recherche de la dernière version a échoué ({exc})')
+        return defret
+    if status != 200:
+        print(f'La recherche de la dernière version a échoué (status={status})')
+        return defret
+    d = json.loads(body.decode("utf-8"))
+    return d['version'], d['final_filename'], d['download_url'], d['size']
+
+
 # aide à comparer des versions
 # transforme 12.0.1  en 9012.9000.9001
-def FormatVersion(version):
+def unusedFormatVersion(version):
     items=version.split(".")
     out=[]
     for item in items:
@@ -340,7 +398,7 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
 
     if mypc:  # mise à jour d'équipement
         print(f"Équipement {vals[2]} trouvé:\n{mypc}")
-        d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idStock=mypc['idStock'],
+        d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
                                  idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
         d['id'] = mypc['id']
         print(f"Dictionnaire à envoyer à tec.tech\n{d}")
@@ -357,7 +415,7 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
         print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         print(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
-        d = from_bolc_to_tectech(vals, idlot=idlot, idStock="", idmaterielreconditionneur=idmatrecond)
+        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond)
         print(f"Dictionnaire à envoyer à tec.tech\n{d}")
         mynewpc = {}
         try:
@@ -410,6 +468,8 @@ def vazy():
     UpdateMe()
 
 if __name__ == '__main__':
+    # ret = DownloadFile("https://audits.emmaus-connect.org/api/apps/linux/download/latest",
+    #                    "downloaded-3.2.3", 8171895)
     vazy()
         
 #files=[ "GRPC99-9999/GRPC99-9999.audit.txt","GRPC99-9999/GRPC99-9999.bolc.csv" ]

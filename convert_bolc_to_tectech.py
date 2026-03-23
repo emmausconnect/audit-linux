@@ -2,9 +2,17 @@ import sys
 import platform
 import argparse
 import json
+import logging
 
 import tectech_data
 from tectech import TecTapiBolcFileConversionError
+
+_logger = logging.getLogger("convert_bolc_to_tectech")
+_logger.level = logging.DEBUG
+_hdlr = logging.StreamHandler()
+_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
+_hdlr.setFormatter(_formatter)
+_logger.addHandler(_hdlr)
 
 # BOLC import file example
 # 3337;;GRPC26-0008;Portable;B;Prêt à vendre;;Apple;;;MacBookPro12,1;75.4%;;;C02SX6JJFVH4;Intel Core i5-5257U;SSD;251;;;9;;;13.3;0;0;2837;;Rudy;26/01/2026 15:17:45;Linux: Linux Mint 22.2 Zara;;;;ESN
@@ -45,7 +53,7 @@ from tectech import TecTapiBolcFileConversionError
 # [('tailleDisqueDur1', {'type': 'number', 'nullable': True}), ('tailleDisqueDur2', {'type': 'number', 'nullable': True}), ('RAM', {'type': 'number', 'nullable': True})]
 
 
-def from_bolc_to_tectech(vals: list, idlot: str, idStock: str, idmaterielreconditionneur: str) -> dict:
+def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielreconditionneur: str) -> dict:
     # From a file that was ready to send to BOLC, create a dictionary suitable for updating a "materiel" on tec.tech
     # A BOLC-style file contains a single CSV line with 35 fields, like:
     # 3337;;GRPC26-0008;Portable;B;Prêt à vendre;;Apple;;;MacBookPro12,1;75.4%;;;C02SX6JJFVH4;Intel Core i5-5257U;SSD;251;;;9;;;13.3;0;0;2837;;Rudy;26/01/2026 15:17:45;Linux: Linux Mint 22.2 Zara;;;;ESN
@@ -113,9 +121,12 @@ def from_bolc_to_tectech(vals: list, idlot: str, idStock: str, idmaterielrecondi
         v = vals[7]
         if v == "Hewlett-Packard":
             v = "HP"
+        if v.upper().startswith("ASUS"):
+            v = "ASUS"
         if v.upper() in tectech_data.allowed_values['marque']:
             d['marque'] = v.upper()
         else:
+            _logger.warning(f"La marque inconnue {v} est convertie en ZTE")
             d['marque'] = "ZTE"
         # 10: infos["Modele"],            # Modele ...
         d['model'] = vals[10]
@@ -162,8 +173,8 @@ def from_bolc_to_tectech(vals: list, idlot: str, idStock: str, idmaterielrecondi
         # 34: Admin.origine               # Origine du reconditionnement: utilisation diverse selon les sites
 
         # at this stage, we have 'idStock' and 'commentaire' to fill up
-        if idStock:
-            d['idStock'] = idStock
+        if idstock:
+            d['idStock'] = idstock
         else:
             d['idStock'] = esn_to_idstock.get(vals[2][0:2])
             if not d['idStock']:
@@ -208,10 +219,11 @@ if __name__ == "__main__":
     # testing the bug signalled by Éric
     vals_ = ['', '', 'MAPC26-2026', 'Portable', 'A', 'En reconditionnement', '', 'Dell', '', '', 'Latitude 5300', '65.5%', '', '', 'DJY3HW2', 'Intel Core i5-8265U', 'SSD', '256', '', '', '9', '', 'oui', '13.3', '0', '0', '5811', '', '', '28/02/2026 14:56:42', 'Linux: LMDE 7 Gigi', '', '', '', 'ESN']
     idlot_ = "L-0670"
+    idStock_ = "S-0095"
     idmaterielreconditionneur_ = "MAPC26-2026"
 
     try:
-        d_ = from_bolc_to_tectech(vals_, idlot_, idmaterielreconditionneur_)
+        d_ = from_bolc_to_tectech(vals_, idlot_, idStock_, idmaterielreconditionneur_)
     except(TecTapiBolcFileConversionError, Exception) as exc_:
         print(exc_)
         d_ = {}

@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import urllib.request, urllib.error
-import http.client
 import argparse
 import logging
 from datetime import datetime, timedelta
@@ -10,6 +9,7 @@ import re
 import csv
 import tectech_data
 
+# import http.client
 # http.client.HTTPConnection.debuglevel = 1
 
 UNIQUESHA1 = "2999a9e7680a2fa2a152d65dbd43be43f9c7e03e"

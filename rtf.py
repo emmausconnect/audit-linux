@@ -8,12 +8,16 @@ import os
 try:
     import qrcode
 
+    print(f">{qrcode=}<")
+
     #--------------------------------------------------------------
     # Transforme un texte en qrcode
     #  fabrique le fichier .png  filename
     # renvoie le contenu en hexadecimal du fichier, pour qu'il soit inséré dans un document RTF
     #---------------------------------------------------------------
     def MakeQR( txt , filename ):
+
+        print(f"MakeQR({txt=}, {filename=})")
 
         # fabrique le qrcode
         qr = qrcode.QRCode( version=6, error_correction=qrcode.constants.ERROR_CORRECT_Q, box_size=10, border=4 )

@@ -2,6 +2,26 @@
 
 *N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous, lors de la 3.2.2 😃*
 
+## 4.0.0
+
+Je considère cette version comme *expérimentale* bien que je l'aie testée du mieux que je pouvais. Si toutefois elle vous pose problème, n'hésitez pas à revenir à la précédente après me l'avoir signalé.
+
+- j'ai entièrement refondu l'extraction des caractéristiques physiques de la machine; elle est désormais plus robuste; cela se voit notamment quand on a affaire à des équipements inhabituels (type "tout-en-un" par exemple); j'ai néanmoins conservé l'affichage de messages relatifs à l'ancienne extraction pour faciliter l'analyse en cas de problème; je réduirai la verbosité de la console au fur et à mesure
+
+- la caractéristique "NVME" (v/s "SATA") est maintenant bien traitée quand on a un disque SSD
+
+- pour ce qui est des disques, je ne prends en compte que le disque principal (celui qui contient la partition ```/```) pour la catégorisation; en effet:
+  - les règles de catégorisation ne sont pas claires pour moi pour le cas où il y a plusieurs disques de types différents
+  - il est très rare d'avoir plusieurs disques sur les PC que nous traitons
+  - j'ai rajouté une ligne AutreDisques dans la liste des caractéristiques affichées, ce qui poussera éventuellement à une pondération technique  
+
+- le fichier TGZ se décompresse désormais en un répertoire dont le nom inclut le n° de version
+
+- le nom de la *version récente* téléchargée par l'outil est désormais le nom du fichier TGZ (au lieu de ```.zip``` auparavant)
+
+- le propriétaire (au sens Linux) des fichiers copiés sur le *bureau* ne devrait plus poser de problèmes de *permissions Linux*
+
+
 ## 3.2.3
 
 - j'ai corrigé un bug signalé par Antoine H.: l'outil tentait à tort de modifer l'```idStock``` d'un matériel existant. Pour un matériel à créer, l'outil déduit la valeur de ```idStock``` à partir des deux premières lettres de ```idEsn```.

@@ -15,11 +15,7 @@
 #====================================================================================
 
 
-import json
-import re
-import sys
 import datetime
-import os
 import html
 import time
 
@@ -47,9 +43,7 @@ else:
 from  rtf import *   
 from ihm  import *
 
-
-
-VERSION=GetLocalVersion()
+from __about__ import __version__
 
 USEIHM=True
 
@@ -423,7 +417,7 @@ def MakeRapport(filename,header,details):
     if header : print("**Creation: " , filename)
 
     items=[
-    f"======================= Rapport d'Audit  (Version={VERSION}) ================",   
+    f"======================= Rapport d'Audit  (Version={__version__}) ================",
     f" IDENTIFIANT     : {Admin.ECID}  ",
     f" DATE            : {Admin.auditdate}    ",
     f" REALISE PAR     : {Admin.benevole}  ",
@@ -849,21 +843,20 @@ def ShowChange(owner,id):
     Browser("https://audits.emmaus-connect.org/api/apps/linux/changelog/web")
 
 def UpdateMe( remotedir =""):
-    localv=GetLocalVersion( )
-    remotev=GetRemoteVersion( )
+    remotev, remotef, remoteu, remotes = GetRemoteVersionInfo()
 
-    print(f"Vérification Versions: Local={localv} Serveur={remotev} \n")
-    if localv == "" or remotev == "": return
+    print(f"Vérification Versions: Local={__version__} Serveur={remotev} \n")
+    if __version__ == "" or remotev == "":
+        return
 
-    localvnew=FormatVersion(localv)
-    remotevnew=FormatVersion(remotev)
-
-
+    # convert to (x, y, z) tuples that can be compared
+    localvnew = tuple([int(_) for _ in __version__.split('.')])
+    remotevnew = tuple([int(_) for _ in remotev.split('.')])
 
     if localvnew < remotevnew :
 
         dlg=Zdialog( "Nouvelle Version !")
-        Ztext( dlg.area, f"Une version plus récente est disponible !\nVersion actuelle: {localv}  \nVersion disponible: {remotev}" )
+        Ztext( dlg.area, f"Une version plus récente est disponible !\nVersion actuelle: {__version__}  \nVersion disponible: {remotev}" )
         bbox=Zhbox(dlg.area)
         Zbutton(dlg,bbox,"QUIT","IGNORER","orange")
         Zbutton(dlg,bbox,"SHOW","Voir les Evolutions","lightgreen", ShowChange)
@@ -873,20 +866,16 @@ def UpdateMe( remotedir =""):
 
         if exitcode in [ "QUIT" , "#QUIT" ] : return
 
-        zipfile=f"audit-linux.{remotev}.zip"
-        print(f"\nDOWNLOAD en cours: {zipfile}\n")
+        dwnlfile = remotef
+        print(f"\nTéléchargement de {dwnlfile} en cours...\n")
 
-        ret=Download( "audits.emmaus-connect.org", "/api/apps/linux/download/latest" , zipfile )
+        ret = DownloadFile(remoteu, dwnlfile, remotes)
 
-        if ret  != "" :
-            print (f"**** {zipfile} téléchargé ! ****\n")
+        if ret  == "SUCCESS":
+            print (f"Téléchargement de {dwnlfile} réussi!\n")
             exit()        
         else:
-            print("*** ECHEC du download ***")
-
-    
-
-
+            print(ret)
 
 
 #==============================================================================
@@ -933,7 +922,7 @@ def ProcessAudit(mini=False,xfer=False):
     # On fait 2 fois le calcul de notes, pour detecter la compatibilite WIN et LINUX
     # la dernière fois est celle de l'OS cible
     # INACTIVE !!!
-    if False:
+    def unusedForNow():  # was: if False:
         for ostype in [ "WIN", "LINUX" ]:
             tmptxtnotes=[]
             sectionnote="#NOTE-" + os  
@@ -1024,15 +1013,6 @@ ChdirScript()
 # charger la maj
 if not WIN : UpdateMe()
 
-# Test interne désactivé
-cpulist=[ "Intel (R) Core(TM)      i5-6200U CPU @ 2.30GHZ  @{Name=bidule}" ,   " AMD 3456 @  2.30GHZ      with double option" ]
-cpulist=[]  # desactive le test
-if len(cpulist) > 0:
-    for cpuname in cpulist :
-        print("Cpuname=",cpuname)
-        print( "Cleanname=",CleanCpuname(cpuname) )
-        print()
-    sys.exit()
 
 if __name__ == '__main__':
 

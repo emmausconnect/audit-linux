@@ -23,10 +23,9 @@ FILESCAN="scan-linux.txt"                        # fichier contenant le scan sys
 OSTARGET="Linux"                                # Utilisé pour trouver kes règles dans regles.csv , et comme suffixe pour DecouverteMonPC
    
 TMPSCANFILE=os.path.join( TMPDISK ,  "scan-linux.txt")           # fichier d'export de la commande inxi
-  
+# print(f"FILESCAN={FILESCAN}")
+# print(f"TMPSCANFILE={TMPSCANFILE}")
 
-
-       
 # Variables globales
 inxidata={}  
 infos={}  # donnees technique issues du scan systeme
@@ -49,23 +48,25 @@ def SystemScan(inxifile):
 # Execute l'audit technique : lancement du scan, decodage 
 #  renvoie infos : dictionnaire de valeurs
 #------------------------------------------
+from ux.characteristics import get_machine_infos
 def AuditMe():
-    if "noscan" not in sys.argv or not os.path.isfile(TMPSCANFILE) :
-        print( f"===================== Lancement du scan système (inxi) .  Creation de {TMPSCANFILE} ===============" )
-        SystemScan(TMPSCANFILE)
-
-    print( f"===================== Décodage des infos système depuis {TMPSCANFILE} ===============" )
-    DecodeInxi( TMPSCANFILE )
-    AnalyzeInxi()
-    return infos
-
+    infostmp =  get_machine_infos()
+    print(infostmp)
+    SystemScan(TMPSCANFILE)  # keep those legacy parts around for now
+    unusedDecodeInxi(TMPSCANFILE)
+    unusedAnalyzeInxi()  # will update the global variable "infos"
+    t = [(_, infos[_], infostmp[_]) for _ in infos if infos[_] != infostmp[_]]
+    for _ in t:
+        print(_)
+    return infostmp
 
 
 
 #------------------------------------------
 # renvoie le nb d'espaces au début d'un texte
 #------------------------------------------
-def Nbspace(txt):
+def unusedNbspace(txt):
+    # raise RuntimeError
     nb=0
     for c in txt:
         if c == " " : nb=nb+1
@@ -80,12 +81,13 @@ def Nbspace(txt):
 #
 # La 1e indentation observée, permet de définir le nb d'espaces de l'indentation
 #-------------------------------------------
-indentvalue=0
-def InxiLine(txt) :
-    global indentvalue
-    indent=Nbspace(txt)
-    if indent != 0 and indentvalue==0 : indentvalue = indent # memoriser la largeur de la 1e indentation
-    if indentvalue != 0: indent = indent / indentvalue # avoir des valeurs de 1  en 1
+unusedIndentvalue=0
+def unusedInxiLine(txt) :
+    # raise RuntimeError
+    global unusedIndentvalue
+    indent=unusedNbspace(txt)
+    if indent != 0 and unusedIndentvalue==0 : unusedIndentvalue = indent # memoriser la largeur de la 1e indentation
+    if unusedIndentvalue != 0: indent = indent / unusedIndentvalue # avoir des valeurs de 1  en 1
 
     txt = txt.strip()
     ( key, value ) = txt.split(":" , 1)
@@ -117,7 +119,8 @@ def InxiLine(txt) :
 # RETURN
 #   structure de données
 #----------------------------------------------------               
-def DecodeInxi( inxifile ):
+def unusedDecodeInxi(inxifile):
+    # raise RuntimeError
     global inxidata
     data={}
     stack={}
@@ -134,7 +137,7 @@ def DecodeInxi( inxifile ):
     with open(inxifile,'r',errors='ignore') as f:
         for line in f:
             if line.strip("\n ") != "" :
-                items.append( InxiLine(line) )
+                items.append(unusedInxiLine(line))
 
     for item  in items:
         (level,key,value) = item
@@ -148,7 +151,8 @@ def DecodeInxi( inxifile ):
 #  "Machine/System/product"
 # USAGE INTERNE
 #-------------------------------------------------------
-def InxiData( txt ):
+def unusedInxiData(txt):
+    # raise RuntimeError
     global inxidata
 
     items=txt.split("/")
@@ -167,7 +171,8 @@ def InxiData( txt ):
 #
 # pour cela, on lit la clé "#"
 #-------------------------------------------------------
-def InxiDataValue( data ) :
+def unusedInxiDataValue(data) :
+    # raise RuntimeError
     if "#" in data:
         return data["#"]
     else:
@@ -178,8 +183,8 @@ def InxiDataValue( data ) :
 #  "Machine/System"
 # pour cela, on lit la clé "#"
 #-------------------------------------------------------
-def InxiValue( txt ) :
-    data= InxiData( txt )
+def unusedInxiValue(txt) :
+    data= unusedInxiData(txt)
     if "#" in data:
         return data["#"]
     else:
@@ -190,8 +195,9 @@ def InxiValue( txt ) :
 #  "Machine/System"
 # pour cela, on renvoie toutes les cles sauf "#"
 #-------------------------------------------------------
-def InxiItems( txt ) :
-    data= InxiData( txt )
+def unusedInxiItems(txt) :
+    # raise RuntimeError
+    data= unusedInxiData(txt)
     newdata={}
     for key,value in data.items():
         if key != "#" :
@@ -209,7 +215,8 @@ def InxiItems( txt ) :
 # RETURN
 #  liste { clé , valeur } 
 #-----------------------------------------------------------
-def AnalyzeInxi():
+def unusedAnalyzeInxi():
+    # raise RuntimeError
     global infos
 
     infos={}
@@ -217,31 +224,31 @@ def AnalyzeInxi():
     # Conversion de type : le BOLC ignore ce qui n'est pas UC / Portable'
     # Soit l'os installé est Windows ou Linux et dans ce cas il est considéré comme UC / Portable
     # Soit l'os installé est android ou IOS  et dans ce cas il est considéré comme une tablette,
-    type=InxiValue("Machine/Type")  
+    type=unusedInxiValue("Machine/Type")
     if type.lower() in ( "desktop" , "mini-pc" )  : type = "UC"
     else:                                           type = "Portable"
     infos["Type"]= type
    
-    infos["Marque"]=InxiValue("Machine/System")
-    infos["Modele"]=InxiValue("Machine/System/product")
-    infos["NumeroSerie"]=InxiValue("Machine/System/product/serial")
+    infos["Marque"]=unusedInxiValue("Machine/System")
+    infos["Modele"]=unusedInxiValue("Machine/System/product")
+    infos["NumeroSerie"]=unusedInxiValue("Machine/System/product/serial")
 
-    infos["Processeur"]=InxiValue("CPU/Info/model")
+    infos["Processeur"]=unusedInxiValue("CPU/Info/model")
 
-    infos["Systeme"]=InxiValue("System/Distro")
+    infos["Systeme"]=unusedInxiValue("System/Distro")
 
     infos["LINUX"]="oui"                                        # valeur forcee
 
 
     # Memoire : suivant la version,  se trouve dans Memory ou Memory/total
-    ram=InxiValue("Info/Memory")
-    if ram == "" : ram=InxiValue("Info/Memory/total")
+    ram=unusedInxiValue("Info/Memory")
+    if ram == "" : ram=unusedInxiValue("Info/Memory/total")
     # print(f"ram = {ram}")
     if m := re.match(r'^(?P<siz>(\d+))\s+(?P<unt>(GiB|Gio))', ram, re.IGNORECASE):
         infos['RAM'] = int(m['siz'])
     else:
         # fallback: legacy code
-        infos["RAM"]= round( DecodeNumber( ram ) )
+        infos["RAM"]= round(unusedDecodeNumber(ram))
     # print(f"infos['RAM'] = {infos['RAM']}")
 
     # Batterie:    "condition": "73.3/80.0 Wh (91.6%) 
@@ -249,8 +256,8 @@ def AnalyzeInxi():
     battery =""
 
     # il se peut, que Inxi renvoie rien sur battery
-    for key,data in InxiItems("Battery").items():
-        tmp=InxiValue(f"Battery/{key}/condition" )
+    for key,data in unusedInxiItems("Battery").items():
+        tmp=unusedInxiValue(f"Battery/{key}/condition")
         if tmp != "":
     	    tmp=tmp.split(" ")
     	    tmp=tmp[-1]   # dernier element
@@ -260,19 +267,19 @@ def AnalyzeInxi():
 
     # Taille ecran  Graphics/Display/Screen-x/Monitor-x/diag
     ecran=""
-    for key,data in InxiItems("Graphics/Display").items():
-        for k, monitor in InxiItems(f"Graphics/Display/{key}").items():
+    for key,data in unusedInxiItems("Graphics/Display").items():
+        for k, monitor in unusedInxiItems(f"Graphics/Display/{key}").items():
             if k.startswith("Monitor-") and "diag" in monitor:
-                v=InxiDataValue( monitor["diag" ] )
+                v=unusedInxiDataValue(monitor["diag"])
                 items=v.split(" ")
                 ecran=items[-1]
                 ecran=ecran.replace("(","").replace(")","").replace('"',"")
 
     # Webcam( pas forcément fiable )  
     webcam=""
-    for key,data in InxiItems("Graphics").items():
+    for key,data in unusedInxiItems("Graphics").items():
         if key.startswith("Device-" ):
-            txt=InxiDataValue( data ).lower()
+            txt=unusedInxiDataValue(data).lower()
             if txt.find("camera") > -1 or txt.find("webcam") > -1 :
                 webcam="oui"
 
@@ -285,22 +292,22 @@ def AnalyzeInxi():
     typedisk=[]
 
     diskid=""
-    for key, elem in InxiItems( "Drives" ).items():
+    for key, elem in unusedInxiItems("Drives").items():
         if key.startswith("ID-" )and "size" in elem:
 
             # oublier les cle USB, qui apparaissent avec type=USB
             if "type" in elem:
-                if InxiDataValue( elem["type"] ).upper() == "USB": continue
+                if unusedInxiDataValue(elem["type"]).upper() == "USB": continue
 
             # Le 1e drive donne le diskID du system
             if diskid=="":
-                diskid=InxiDataValue( elem )
+                diskid=unusedInxiDataValue(elem)
 
             # ajouter la taille disque
-            s=InxiDataValue( elem["size"] )
-            print(f"partial sizedisk = {DecodeNumber(s)} GB/Go")
+            s=unusedInxiDataValue(elem["size"])
+            print(f"partial sizedisk = {unusedDecodeNumber(s)} GB/Go")
             # we want to keep disk sizes in GB (not GiB) because that's how they are advertised
-            sizedisk = sizedisk + round(DecodeNumber(s))
+            sizedisk = sizedisk + round(unusedDecodeNumber(s))
 
             # si le disque est nvme , on a une pattern comme id=/dev/nvme0n1
             if diskid.find("nvme") > -1 :
@@ -308,14 +315,14 @@ def AnalyzeInxi():
 
             # modele de disque
             if "model" in elem:
-                typedisk.append( InxiDataValue(elem["model"]) )
+                typedisk.append(unusedInxiDataValue(elem["model"]))
 
     print(f"sizedisk = {sizedisk} GB/Go")
     infos["DisqueTaille"] = sizedisk  # round(sizedisk)
     infos["DisqueRef"]= ",".join(typedisk)
     infos["DisqueID"]=diskid
 
-    infos["DisqueType"] = DetectDiskType( diskid )
+    infos["DisqueType"] = unusedDetectDiskType(diskid)
 
 
 #----------------------------------------------------------------------
@@ -328,7 +335,8 @@ def AnalyzeInxi():
 #
 # ATTENTION: ça dit n'importe quoi pour les clé usb !
 #----------------------------------------------------------------------
-def DetectDiskType(diskid):
+def unusedDetectDiskType(diskid):
+    # raise RuntimeError
     tmp=diskid.split("/")
     device=tmp[-1]
     fileinfo=f"/sys/block/{device}/queue/rotational"
@@ -351,17 +359,40 @@ def DetectDiskType(diskid):
 #-----------------------------------------------------------
 def Copy2Desktop(files):
 
+    print(f"Copy2Desktop({files = })")
     BUREAU=""
-    for b in [ "Bureau" ,"Desktop"]:
-        bname=os.path.join(  os.environ["HOME"] , b )
-        if os.path.isdir(bname):  BUREAU=bname
+    insudo = False
+    if suu := os.environ.get("SUDO_USER"):
+        insudo = True
+        enduserrootdir = f"/home/{suu}"
+        enduseruid = int(os.environ.get("SUDO_UID"))
+        endusergid = int(os.environ.get("SUDO_GID"))
+    else:
+        enduserrootdir = os.environ.get("HOME")
+        enduseruid = -1
+        endusergid = -1
 
-    if BUREAU != "" :
+    for b in [ "Bureau" ,"Desktop"]:
+        bname = os.path.join(enduserrootdir, b)
+        if os.path.isdir(bname):
+            BUREAU = bname
+
+    print(f"{BUREAU=}, {insudo=}, {enduserrootdir=}, {enduseruid=}, {endusergid=}")
+    if BUREAU != "":
         for name in files:
-            if os.path.isfile(name) : 
-                CopyFile( name , BUREAU )
+            dst = os.path.join(BUREAU, name)
+            if os.path.isfile(name):
+                CopyFile(name, BUREAU)
+                if insudo:
+                    cmd = f"chown {enduseruid}:{endusergid} {BUREAU}{os.sep}{os.path.basename(dst)}"
+                    print(cmd)
+                    os.system(cmd)
             if os.path.isdir(name):
-                CopyDir( name , BUREAU )
+                CopyDir(name, BUREAU)
+                if insudo:
+                    cmd = f"chown -R {enduseruid}:{endusergid} {dst}"
+                    print(cmd)
+                    os.system(cmd)
     else:
         return False
 
@@ -378,11 +409,17 @@ def CopyFile( src, dstdir):
 def CopyDir( src, dstdir):
     os.system( f"rsync -r {src} {dstdir}/" )
 
-def ConvertFile(name):
+def unusedConvertFile(name):
     return name
 
 
 if  __name__ == "__main__":
     infos_ = AuditMe()
+
+    # myscan_ = "/home/ghalebp/tmp/linux-bernard-maison-to-tec.tech/MAPC26-0019/MAPC26-0019.scan-linux.txt"
+    # DecodeInxi( myscan_)
+    # AnalyzeInxi()
+    # infos_ = infos
+    # infos_ = get_machine_infos()
 
     sys.exit(0)

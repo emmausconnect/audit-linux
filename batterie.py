@@ -5,6 +5,7 @@ import time
 import signal
 import sys
 import datetime
+import subprocess
 
 from ux.linux import *
 
@@ -64,21 +65,23 @@ def abort():
 #----------------------------------------------------------------------
 def ShowBattery(i,minutes,initbat) :
 
-    # commande inxi pour avoir les infos de batterie
-    cmd=f"inxi -B -y1 > {inxifile} "
-    os.system(cmd)
-
-    # Decodage des infos dans Inxi            
-    DecodeInxi(inxifile)
-
-    # "Battery/ID-x/charge"
-    batinfo=""
-    for key,data in InxiItems("Battery").items() :
-        # decodage de la charge batterie
-        v=InxiValue(f"Battery/{key}/charge" )
-        if v != "" : batinfo =v
+    try:
+        out = subprocess.check_output(["inxi", "-Bcy1"], text=True)
+        # out = "Battery:\n  ID-1: BAT0\n    charge: 22.5 Wh (94.1%)\n    condition: 23.9/23.9 Wh (100.0%)\n"
+        out = out.split('\n')
+        # _logger.debug(f"Recherche de l'indice de santé de la batterie dans {out}")
+        chargel = [l for l in out if "charge" in l]
+        if not chargel or len(chargel) > 1:
+            batinfo = ""
+        else:
+            batinfo = chargel[0].strip()
+    except Exception as exc:
+        print(f"Exception lors du calcul de la charge de la batterie ({exc})")
+        batinfo = ""
 
     if batinfo == "" : abort()
+    # we want batinfo like "22.5 Wh (94.1%)"
+    batinfo = batinfo.replace('charge: ', '')
 
     tmp=batinfo.split("(" )
     batinfo=tmp[-1]
