@@ -256,6 +256,31 @@ class TecTAPI:
 
 
     @classmethod
+    def lookup_equipment_by_id(cls, tectid: str) -> dict:
+        # look for a "materiel" in tec.tech, based 'id'
+        epmateriel = "materiel"
+        maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}/{tectid}"
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
+        req = urllib.request.Request(url=maturl, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req) as response:
+                body = response.read()
+                status = response.status
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+            errmsg = f'La recherche directe de {tectid} par id a échoué ({exc})'
+            raise TecTapiEquipmentNotFound(errmsg) from exc
+
+        if status != 200:
+            errmsg = f'La recherche directe de {tectid} par id a échoué (status: {status})'
+            raise TecTapiEquipmentNotFound(errmsg)
+
+        d = json.loads(body.decode("utf-8"))
+
+        # nb is certainly 1!
+        return d
+
+
+    @classmethod
     def lookup_equipment_by_idmatrec(cls, idmatrec: str) -> dict:
         # look for a "materiel" in tec.tech, based only on idMaterielReconditionneur
         epmateriel = "materiel"
@@ -288,9 +313,6 @@ class TecTAPI:
             raise TecTapiDuplicateEquipmentFound(errmsg)
 
         if nb == 0:
-            errmsg = f'La recherche de {idmatrec} par idMaterielReconditionneur a échoué'
-            # raise TecTapiEquipmentNotFound(errmsg)
-            _logger.warning(errmsg)
             return {}
 
         # nb is certainly 1!
@@ -298,8 +320,51 @@ class TecTAPI:
 
 
     @classmethod
-    def lookup_equipment(cls, idesn: str) -> dict:
-        # look for a "materiel" in tec.tech, based only on idEsn
+    def lookup_equipment_by_numser(cls, numser: str) -> dict:
+        # look for a "materiel" in tec.tech, based only on idMaterielReconditionneur
+        epmateriel = "materiel"
+        limit = 2
+        maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?numeroSerie={numser}&page=1&limit={limit}"
+        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
+        req = urllib.request.Request(url=maturl, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req) as response:
+                body = response.read()
+                status = response.status
+                # code = response.code
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+            errmsg = f'La recherche de {numser} par idMaterielReconditionneur a échoué ({exc})'
+            # _logger.error(errmsg)
+            raise TecTapiEquipmentNotFound(errmsg) from exc
+
+        if status != 200:
+            errmsg = f'La recherche de {numser} par numeroSerie a échoué (status: {status})'
+            # _logger.error(errmsg)
+            raise TecTapiEquipmentNotFound(errmsg)
+
+        d = json.loads(body.decode("utf-8"))
+
+        nb = int(d['total'])
+
+        if nb > 1:
+            errmsg = f"La recherche de {numser} par numeroSerie a trouvé plus d'une ({nb}) occurences"
+            _logger.error(errmsg)
+            dd = d['data']
+            errmsg = ', '.join([f"({dd[_]['id']}, ns={dd[_]['numeroSerie']}, idmatrec={dd[_]['idMaterielReconditionneur']}, idesn={dd[_]['idEsn']})" for _ in [0, 1]])
+            _logger.error(errmsg)
+            raise TecTapiDuplicateEquipmentFound(errmsg)
+
+        if nb == 0:
+            return {}
+
+        # nb is certainly 1!
+        return d['data'][0]
+
+
+    @classmethod
+    def lookup_equipment(cls, idesn: str, numeroserie: str="") -> dict:
+        _logger.info(f"Recherche de l'équipement {idesn}, {numeroserie=}")
+        # look for a "materiel" in tec.tech, based only on idEsn and numeroSerie
         epmateriel = "materiel"
         limit = 2
         maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idEsn={idesn}&page=1&limit={limit}"
@@ -329,17 +394,35 @@ class TecTAPI:
             # _logger.error(errmsg)
             raise TecTapiDuplicateEquipmentFound(errmsg)
 
-        if nb == 0:
-            # tenter une recherche sur idMaterielReconditionneur
-            try:
-                d = cls.lookup_equipment_by_idmatrec(idesn)
-            except (TecTapiEquipmentNotFound, Exception) as exc:
-                raise TecTapiEquipmentNotFound from exc
-            else:
-                return d
+        if nb == 1:
+            return d['data'][0]
 
-        # nb is certainly 1!
-        return d['data'][0]
+        # nb is certainly 0!
+        _logger.warning(f'La recherche de {idesn} par idEsn a échoué')
+
+        # try to look the equipment up based on idMaterielReconditionneur
+        try:
+            d = cls.lookup_equipment_by_idmatrec(idesn)
+        except (TecTapiEquipmentNotFound, Exception) as exc:
+            raise TecTapiEquipmentNotFound from exc
+
+        if d:
+            return d
+
+        _logger.warning(f'La recherche de {idesn} par idMaterielReconditionneur a échoué')
+
+        if not numeroserie:
+            return {}
+
+        # tenter une recherche sur numeroSerie
+        try:
+            d = cls.lookup_equipment_by_numser(numeroserie)
+        except (TecTapiEquipmentNotFound, Exception) as exc:
+            raise TecTapiEquipmentNotFound from exc
+        else:
+            _logger.info(f'La recherche de {numeroserie} par numeroSerie a rendu {d}')
+            return d
+
 
     @classmethod
     def _check_enumerated_values(cls, mat: dict) -> str:
@@ -369,10 +452,11 @@ class TecTAPI:
             raise TecTapiBadIdesnFormat(errmsg)
 
         # check that the equipment already exists
+        numser = mat.get('numeroSerie')
         try:
-            previous = cls.lookup_equipment(idesn)
+            previous = cls.lookup_equipment(idesn, numser)
         except TecTapiError as exc:
-            raise exc
+            raise TecTapiEquipmentNotFound from exc
 
         # run a sanity-check on the fields to be updated
         for f in cls.__ro_fields:
@@ -570,6 +654,47 @@ if __name__ == "__main__":
 
     fmt_ = "%Y-%m-%d %H:%M:%S"
     updtime_ = datetime.strftime(datetime.now(), fmt_)
+
+    dros_ = "GRPC26-9999"
+    sn_ = "2CE347155K"
+    id_ = "M-5639"
+    # This is for the tester to make sure that the equipment is properly configured for the test at TECT side
+    idesnS_ = [dros_, ""]
+    idmatrecS_ = [dros_, f"EM_{dros_}"]
+    numserS_ = [sn_, ""]
+    cas_ = [(a, b, c) for a in idesnS_ for b in idmatrecS_ for c in numserS_]
+    for _ in cas_:
+        print(f"     idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]}")
+    # (output redacted)
+    # There are 4 relevant test cases
+    #      idEsn=GRPC26-9999  idMaterielReconditionneur=GRPC26-9999     numeroSerie=2CE347155K
+    #      idEsn=GRPC26-9999  idMaterielReconditionneur=EM_GRPC26-9999  numeroSerie=2CE347155K
+    #      idEsn=             idMaterielReconditionneur=GRPC26-9999     numeroSerie=2CE347155K
+    #      idEsn=             idMaterielReconditionneur=EM_GRPC26-9999  numeroSerie=2CE347155K
+    # N/A  idEsn=             idMaterielReconditionneur=EM_GRPC26-9999  numeroSerie=
+    # N/A  idEsn=             idMaterielReconditionneur=GRPC26-9999     numeroSerie=
+    # N/A  idEsn=GRPC26-9999  idMaterielReconditionneur=EM_GRPC26-9999  numeroSerie=
+    # N/A  idEsn=GRPC26-9999  idMaterielReconditionneur=GRPC26-9999     numeroSerie=
+
+    cas_ = [(a, b, c) for a in idesnS_ for b in idmatrecS_ for c in numserS_ if c]
+    for _ in cas_:
+        print(f"Make sure that idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]} on TECT side")
+        try:
+            d_ = api_.lookup_equipment_by_id(id_)
+            _logger.info(f"{d_=}")
+            theid_ = _[0] if _[0] else _[1][3:]
+            thesn_ = _[2]
+            x_ = api_.lookup_equipment(theid_)
+            y_ = api_.lookup_equipment(theid_, thesn_)
+        except (TecTapiError, Exception) as exc_:
+            _logger.error(f"Got ({exc_})")
+            pass
+        else:
+            _logger.info(f"{x_=}, {y_=}")
+
+    pc_emh_ = "MAPC26_0033"
+    pc_emh_numser_ = "PF1P0TFE"
+    mypc_emh_ = api_.lookup_equipment(pc_emh_, pc_emh_numser_)
 
     pc26_ = "MAPC26-2026"  #"MBPC26-0106"
     mypc26_ = api_.lookup_equipment(f"{pc26_}")

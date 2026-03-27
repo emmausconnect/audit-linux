@@ -10,7 +10,7 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 
 - son unique vocation étant de faire de l'audit, l'outil ne permet pas de modifier certains attributs déjà déclarés dans la base tec.tech (```'id', 'idLot', 'idStock', 'idGroupe', 'reconditionneur', 'createdAt', 'updatedAt'```)
 
-- pour l'outil, l'identifiant utilisé pour désigner un matériel est toujours son "ID ESN" (```idEsn``` dans l'API tec.tech) conforme à la notation utilisée par l'outil dans le contexte BOLC. Par exemple: ```GRPC26-0888```
+- pour l'outil, l'identifiant utilisé pour désigner un matériel est toujours son "ID ESN" (```idEsn``` dans l'API tec.tech) conforme à la notation utilisée par l'outil dans le contexte BOLC. Par exemple: ```GRPC26-0043```
 
 - l'outil a subi les tests de base mais est encore jeune; il est fortement recommandé de lire les [notes d'évolution](https://audits.emmaus-connect.org/api/apps/linux/changelog/web) et de se familiariser avec l'outil sur la base tec.tech de test (voir ci-dessous)
 
@@ -71,14 +71,14 @@ Pour mémoire, les idEsn doivent se conformer au modèle:
 
 ## Modification d'un matériel existant v/s création d'un nouveau matériel
 
-L'outil d'audit ne sait faire des recherches qu'avec l'identifiant *eePCaa-nnnn* qu'on lui donne en paramètre (```GRPC26-0043``` est pris ici comme exemple).
+L'outil d'audit ne sait faire des recherches qu'avec l'identifiant *eePCaa-nnnn* qu'on lui donne en paramètre (```GRPC26-0043``` est pris ici comme exemple) ou bien le numéro de série du matériel, tel que directement extrait par l'audit.
 
 De ma compréhension actuelle de tec.tech, pour un PC:
 
 - reconditionné par un pro: ```idMaterielReconditionneur``` contient l'identifiant attribué par le pro,
 - reconditionné par l'ESN: ```idMaterielReconditionneur``` contient l'identifiant *eePCaa-nnnn*, attribué par l'ESN.
 
-Dans tous les cas, pour tec.tech, ```idEsn``` est un champ libre, que nous (bénévoles reconditionneurs) utilisons comme identifiant unique. Autrement dit, pour nous, ```idEsn``` est une valeur conforme à la syntaxe *eePCaa&#x2011;nnnn* et unique dans tec.tech, alors que pour tec.tech, ce champ n'est nullement contraint.
+Dans tous les cas, pour tec.tech, ```idEsn``` est un champ libre, que nous (bénévoles reconditionneurs) utilisons comme identifiant unique. Autrement dit, pour nous, ```idEsn``` est une valeur conforme à la syntaxe *eePCaa&#x2011;nnnn* et unique dans tec.tech, alors que pour tec.tech, **ce champ n'est nullement contraint**.
 
 Dans notre exemple, l'outil d'audit cherche donc le PC d'abord par le ```idEsn=GRPC26-0043``` puis, en cas d'échec, par ```idMaterielReconditionneur=GRPC26-0043```.
 
@@ -88,13 +88,19 @@ Dans notre exemple, l'outil d'audit cherche donc le PC d'abord par le ```idEsn=G
 
   - si on a donné un numéro de lot, il considère que c'est une création et il la réalise,
 
-  - sinon, il ne fait rien
+  - sinon, il tente une recherche sur ```numeroSerie```
+
+    - s'il trouve, il s'agit d'une modification: on met à jour ```idEsn``` et les données d'audit,
+
+    - sinon, il ne fait rien
 
 Ça marche très bien si le référent déclare les PC par leur ```idEsn``` avant de les mettre entre les mains des bénévoles pour l'audit (procédure appliquée notamment à Grenoble).
 
+Ça marche aussi pour des PC reconditionnés par un pro, qui ont été déclarés dans tec.tech avec un ```idMaterielReconditionneur``` (au format propre au pro) et un ```numeroSerie```, et pour lesquels ```idEsn``` n'a pas encore été renseigné.
+
 Ça marche assez bien si le référent déclare au moins le lot. Comme vu ci-dessus, l'outil d'audit sait créer des matériels dans tec.tech à partir des deux infos: ```idLot``` et ```idEsn```.
 
-De façon générale, à ma connaissance, le notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, à l'heure où j'écris, il existe, dans tec.tech de nombreux doublons avec plusieurs matériels (*ID* différents) ayant les mêmes ```idMaterielReconditionneur+numeroSerie```…
+De façon générale, à ma connaissance, la notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, à l'heure où j'écris, il existe dans tec.tech plusieurs dizaines de cas où des matériels différents (*ID* différents) ont les mêmes ```idMaterielReconditionneur+numeroSerie```…
 
 
 ## Notes importantes

@@ -98,6 +98,7 @@ class Admin():
     origine=""          # Origine du PC ( ASF, Ecodair, Trira, ESN ... )  utilisation variable selon les sites
     bolcstatut=""       # statut dans le bolc
     auditdate=""        # date de l'audit
+    nomcomm = ""        # modèle?
 
 
 
@@ -379,6 +380,10 @@ def MakeSendFiles(xfer=True):
 
         print()
 
+    print(">" * 64)
+    print(f"{infos=}")
+    print("<" * 64)
+
     if exitcode in [ "BOTH" ] :
         # envoi du fichier bolc
         # Pour déposer sur le bolc par sftp, il faut rajouter une 1e colonne contenant le N° du don
@@ -388,8 +393,8 @@ def MakeSendFiles(xfer=True):
         if not tectech_:
             print(f"\n-------- envoi du fichier bolc vers le serveur BOLC ({filebolcimportbase}) ------------------")
         else:
-            print(f"\n-------- envoi des infos du fichier bolc {filebolcimportbase}"
-                  f' vers le serveur tec.tech ({"PROD" if useproapi_ else "TEST"}) ------------------')
+            print(f"\n========== Envoi des infos du fichier bolc {filebolcimportbase}"
+                  f' vers le serveur tec.tech ({"PROD" if useproapi_ else "TEST"}) ==========\n')
             print(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
         TransfertVersBaseAdmin(filebolcimport,DEBUG, tectech_, useproapi_, Admin.iddonlot, Admin.idrecond,
                                Admin.ECID)

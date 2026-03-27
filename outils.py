@@ -116,7 +116,7 @@ def Editor(file):
 # RETURN
 #  valeur saisie
 #----------------------------------------------------------------
-def InputValue(txt,goodlist=[], regexp="", number=False):
+def unusedInputValue(txt,goodlist=[], regexp="", number=False):
     print()
     ok=False
 
@@ -250,7 +250,7 @@ def DownloadFile(url: str, afile: str, siz: int) -> str:
 # Lit le N° de version 
 #
 #------------------------------------------------------------------
-def GetLocalVersion():
+def unusedGetLocalVersion():
     filename="version.txt"
     if not os.path.isfile(filename): 
         txt=""
@@ -313,7 +313,7 @@ def unusedFormatVersion(version):
 #
 # on utilise curl, car python3-requests n'est pas installé sur certains Linux ( Debian Xfce )
 #------------------------------------------------------------------
-def ReadUrl(url,tmpfile="ztmp.txt"):
+def unusedReadUrl(url, tmpfile="ztmp.txt"):
 
     # cas d'un fichier local
     if not url.startswith("https"):
@@ -371,7 +371,7 @@ def TransfertBolc(filebolcimport="",debug=False):
 def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = False, idlot: str = "", idmatrecond: str = "", ecid: str= ""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
-    print("=== Transfert à faire vers tec.tech===")
+    print("=== Transfert à faire vers tec.tech ===")
 
     with open(filebolcimport, 'r') as bf:
         line = bf.readline().strip('\n')  # we carelessly read a single line and assume it is what we want
@@ -391,13 +391,13 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
     print(f'se périme le : {api.tokenexpirytimestr}')
 
     try:
-        mypc = api.lookup_equipment(vals[2])
+        mypc = api.lookup_equipment(vals[2], vals[14])
     except Exception as exc:
-        print(f"Erreur lors de la recherche de {vals[2]} ({exc})")
+        print(f"Erreur lors de la recherche de {vals[2]}/{vals[14]} ({exc})")
         sys.exit(1)
 
     if mypc:  # mise à jour d'équipement
-        print(f"Équipement {vals[2]} trouvé:\n{mypc}")
+        print(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
         d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
                                  idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
         d['id'] = mypc['id']
@@ -411,10 +411,10 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
             # print("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
             mynewpc = api.update_equipment(d)
         except Exception as exc:
-            print(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{mynewpc[0]}")
+            print(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+        print(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
-        print(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
+        print(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
         d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond)
         print(f"Dictionnaire à envoyer à tec.tech\n{d}")
         mynewpc = {}
@@ -422,8 +422,8 @@ def TransfertTectech(filebolcimport="", debug: bool = False, useprodapi: bool = 
             # print("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
             mynewpc = api.create_equipment(d)
         except Exception as exc:
-            print(f"La création de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel équipement {vals[2]} créé dans tec.tech:\n{mynewpc[0]}")
+            print(f"La création de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+        print(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
 
     # we trustfully use the existing naming scheme...
     dest = os.path.join("..", ecid, f"{ecid}.tect.csv")
@@ -455,8 +455,8 @@ def TransfertVersBaseAdmin(filebolcimport="", debug=False, tect: bool = False, u
 # RETURN
 #  
 #--------------------------------------------------
-def TransfertEmmaus(zipfile,ecid):
-        cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={ecid}" -F "actual_file=@{zipfile}"  '
+def TransfertEmmaus(zf, ecid):
+        cmd=f'{CURL} -X POST https://audits.emmaus-connect.org/api/upload/zip {P}quiet{S} -F "ecid={ecid}" -F "actual_file=@{zf}"  '
         os.system(cmd)
 
            
@@ -464,13 +464,14 @@ def TransfertEmmaus(zipfile,ecid):
 
 
 
-def vazy():
-    UpdateMe()
+# def vazy():
+#     UpdateMe()
 
 if __name__ == '__main__':
     # ret = DownloadFile("https://audits.emmaus-connect.org/api/apps/linux/download/latest",
     #                    "downloaded-3.2.3", 8171895)
-    vazy()
+    # vazy()
+    pass
         
 #files=[ "GRPC99-9999/GRPC99-9999.audit.txt","GRPC99-9999/GRPC99-9999.bolc.csv" ]
 #MakeZip( "zzz.zip", files)

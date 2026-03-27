@@ -2,6 +2,11 @@
 
 *N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous, lors de la 3.2.2 😃*
 
+## 4.1.0
+
+- quand les deux premiers critères de recherche n'ont pas trouvé l'équipement, l'outil lance désormais une recherche basée sur le numéro de série qu'il a lui-même extrait (demande de Éric D.) Voir le README pour les détails.
+
+
 ## 4.0.0
 
 Je considère cette version comme *expérimentale* bien que je l'aie testée du mieux que je pouvais. Si toutefois elle vous pose problème, n'hésitez pas à revenir à la précédente après me l'avoir signalé.
