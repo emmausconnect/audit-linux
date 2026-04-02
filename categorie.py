@@ -49,7 +49,7 @@ def ComputeCategorie( csvregles , note):
 #  note de base 
 #  txtnotes modifié
 #---------------------------------------------------
-def ComputeNote( infos , csvregles ,section ,txtnotes):
+def ComputeNote(infdic, csvregles, section, txtnotes):
 
 
     rules=ReadCSV( csvregles,section)
@@ -63,10 +63,10 @@ def ComputeNote( infos , csvregles ,section ,txtnotes):
         if key == "" : continue  # ligne vide ou non applicable
 
         # si le critere existe dans les infos
-        if key in infos:
-            keyvalue=float( infos[key] )
+        if key in infdic:
+            keyvalue=float(infdic[key])
             keyvalue=round(keyvalue)     # arrondi : une mémoire de 3.99 GO sera vue comme 4 . Il y a des petits risque d'écart suite à la conversion GiB / GB
-            keynote=0
+            # keynote=0
 
             # parcourir les valeurs de la regle, si la valeur reelle est inferieure à la valeur de la règle, on retourne la note associée
             for note,limit in rule.items():
@@ -74,14 +74,14 @@ def ComputeNote( infos , csvregles ,section ,txtnotes):
                 if not limit.isnumeric(): continue  # Eliminer ce qui n'est pas une valeur numerique
 
                 # marge:  
-                marge= 0.94  # 6% de marge  ... permet à un disque de 250GO d'être traité comme un disque 256GO
+                # marge= 0.94  # 6% de marge  ... permet à un disque de 250GO d'être traité comme un disque 256GO
                 marge=1.0    # abandon de la marge : pour éviter des écarts avec les moulinettes Excel qui peuvent exister dans les sites
                 vlimit=float(limit)* marge  
                 if keyvalue < vlimit:
                     txt=f"{key}={keyvalue} Note={note}" 
                     txtnotes.append(txt)
                     finalnote=finalnote+ float(note)
-                    break;
+                    break
 
     return int(finalnote)            
 
@@ -104,7 +104,7 @@ def ComputeNote( infos , csvregles ,section ,txtnotes):
 #  note modifiée
 #  txtnotes modifié
 #---------------------------------------------------
-def ComputeNoteModif( infos , csvregles ,section ,txtnotes,initialnote):
+def ComputeNoteModif(infdic, csvregles, section, txtnotes, initialnote):
 
     maxcrit=5
     rules=ReadCSV( csvregles,section)
@@ -114,17 +114,17 @@ def ComputeNoteModif( infos , csvregles ,section ,txtnotes,initialnote):
 
     txtnotes.append("")
     txtnotes.append(f"Note brute avant ajustements={initialnote} ")
-    txtnotes.append(f"Delta NoteTechnique={infos['NoteTechnique']}")
-    txtnotes.append(f"Delta NoteEsthetique={infos['NoteEsthetique']}")
+    txtnotes.append(f"Delta NoteTechnique={infdic['NoteTechnique']}")
+    txtnotes.append(f"Delta NoteEsthetique={infdic['NoteEsthetique']}")
 
-    note=note + int(infos["NoteTechnique"]) + int(infos["NoteEsthetique"])
+    note= note + int(infdic["NoteTechnique"]) + int(infdic["NoteEsthetique"])
     txtnotes.append("")
 
     # parcourir toutes les regles
     for rule in rules:
         if rule[section]=="" : continue    # regle non activée si la 1e colonne est vide
         #print("\n",rule["DESCRIPTION"])
-        allpresent=True
+        # allpresent=True
         critlist={}
 
         # fabriquer la liste des criteres non vides pour cette règle
@@ -142,10 +142,10 @@ def ComputeNoteModif( infos , csvregles ,section ,txtnotes,initialnote):
         ok=True
         for critname,critvalue in critlist.items():
             # tous les criteres doivent être presents dans infos
-            if critname not in infos: 
+            if critname not in infdic:
                 ok=False
             else:
-                infosvalue=infos[critname] 
+                infosvalue=infdic[critname]
                 # si critvalue est vide, on vérifier seulement que le critname existe dans infos
                 # si non, on verifie que la valeur reelle dans infos est inferieure à critvalue
                 if critvalue == "" :

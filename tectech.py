@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import re
 import csv
 import tectech_data
+from ux.linux import chown_to_user
 
 # import http.client
 # http.client.HTTPConnection.debuglevel = 1
@@ -607,6 +608,7 @@ class TecTAPI:
                 writer = csv.DictWriter(csvfile_, fieldnames=fieldnames, delimiter=',')
                 writer.writeheader()
                 writer.writerow(d)
+            chown_to_user(destfile)
             _logger.info(f"Écriture de {destfile} terminée")
         except Exception as exc:
             errmsg = f"La création du fichier CSV a échoué ({exc})"

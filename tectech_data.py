@@ -49,3 +49,16 @@ internal_to_external_fnames = {
     'webcam': 'Webcam',
     'commentaire': 'Commentaire'
 }
+external_to_external_fnames = {internal_to_external_fnames[k]: k for k in internal_to_external_fnames}
+
+internal_to_external_snames = {
+    "NON_REEMPLOYABLE": "Non réemployable",
+    "PRET_A_COMMANDER": "Prêt à commander",
+    "EN_COURS_DE_TRAITEMENT": "En cours de traitement",
+    "A_TRAITER": "À traiter",
+    "SAV": "SAV",
+    "PRET_A_DISTRIBUER": "Prêt à distribuer",
+    "DISTRIBUE": "Distribué",
+    "EN_COURS_DE_LIVRAISON": "En cours de livraison"
+}
+external_to_external_snames = {internal_to_external_snames[k]: k for k in internal_to_external_snames}

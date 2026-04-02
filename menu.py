@@ -116,17 +116,17 @@ def MenuRecondActions(owner,id):
     if id == "AUDITMINI":
         GetPasswd()
         PrepareSudo()
-        ProcessAudit(mini=True)
+        ProcessAudit(mini=True, useprodapi=False)
 
     if id == "AUDITXFER":
         GetPasswd()
         PrepareSudo()
-        ProcessAudit(mini=False,xfer=True )
+        ProcessAudit(mini=False, useprodapi=False, xfer=True )
 
     if id == "AUDIT": 
         GetPasswd() 
-        PrepareSudo()      
-        ProcessAudit(mini=False,xfer=False)
+        PrepareSudo()
+        ProcessAudit(mini=False, useprodapi=False, xfer=False)
 
     if id == "CARACT":
         c = Caract()
@@ -145,7 +145,7 @@ def MenuRecondActions(owner,id):
     #     TransfertBolc(filebolc)
 
     if id == "STATUT":
-        BolcStatut(DEBUG)
+        BolcStatut()
 
     if id == "KEYBDFR":
         cmd= "bash setxkbmap-fr"

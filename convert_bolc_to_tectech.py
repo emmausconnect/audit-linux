@@ -66,12 +66,6 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         "Portable": "ORDINATEUR_PORTABLE",
         "Tablette": "TABLETTE"
     }
-    bolc_to_tectech_statuts = {
-        "En reconditionnement": "EN_COURS_DE_TRAITEMENT",
-        "Prêt à vendre": "PRET_A_DISTRIBUER",
-        "En attente": "A_TRAITER",
-        "HS": "NON_REEMPLOYABLE",
-        "A entrer dans Salesforce": "A_TRAITER"}
     esn_to_idstock = {
         "LV": "S-0052",
         "VI": "S-0053",
@@ -111,7 +105,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         # 4: Admin.categorie,            # categorie  A B C D Premium INVENDABLE
         d['categorie'] = vals[4].upper()
         # 5: Admin.bolcstatut,           # Prêt à vendre, En reconditionnement ...
-        d['statut'] = bolc_to_tectech_statuts.get(vals[5], "EN_COURS_DE_TRAITEMENT")
+        d['statut'] = vals[5]
         if d['categorie'] == "INVENDABLE":
             d['categorie'] = "D"
             d['statut'] = "NON_REEMPLOYABLE"

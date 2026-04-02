@@ -1,10 +1,38 @@
-### Généralités
+## Si vous utilisez cet outil pour la première fois…
 
-*N'oubliez pas de lire le fichier ```README.pdf``` que j'ai largement revu, rien que pour vous, lors de la 3.2.2 😃*
+- l'outil peut être téléchargé depuis le site [audits.emmaus-connect.org](https://audits.emmaus-connect.org/api/apps/linux/web) sous la forme d'un fichier ```linux-x.y.z.tgz```
+
+- le fichier se décompresse avec une commande qui créera localement un répertoire ```audit-linux-x.y.z``` contenant l'outil:
+```
+tar xzf linux-x.y.z.tgz
+```
+
+## Important
+*N'oubliez pas de lire le fichier ```README.pdf``` 😃*
+
+## 4.2.0
+
+- une section "première fois…" a été ajoutée ici-même pour aider les débutant(e)s
+
+- on utilise les *statuts* définis par tec.tech (et non plus ceux du BOLC)
+
+- on affiche plus clairement la nature du disque principal (HDD/SSD, ATA/NVME)
+
+- ```../eettaa-nnnn/...``` appartient désormais à l'utilisateur qui lance l'audit (et non plus à ```root```); on peut donc le supprimer aisément (demande de Charles M.)
+
+- le fichier CSV tec.tech a été ajouté au ```.zip``` envoyé vers la base des audits
+
+- un gros travail de nettoyage du code *historique* a été commencé:
+  - suppression de toutes les analyses du résultat de *inxi* (ledit résultat est néamoins conservé)
+  - suppression de ```version.txt``` (sa fonction est désormais fournie par ```__about__.py```)
+  - suppression des accès au BOLC
+  - suppression des références à Windows
+  - limitation de l'usage de variables globales trans-fichiers, qui rendent la maintenance très difficile
+
 
 ## 4.1.0
 
-- quand les deux premiers critères de recherche n'ont pas trouvé l'équipement, l'outil lance désormais une recherche basée sur le numéro de série qu'il a lui-même extrait (demande de Éric D.) Voir le README pour les détails.
+- quand les deux premiers critères de recherche n'ont pas trouvé l'équipement, l'outil lance désormais une recherche basée sur le numéro de série qu'il a lui-même extrait (demande de Éric D.) Voir le README pour les détails
 
 
 ## 4.0.0

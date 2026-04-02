@@ -1,36 +1,3 @@
-#################################################################
-#  fonctions diverses
-#
-################################################################
-
-import json
-
-#----------------------------------------------------------
-# Decode un texte de la forme 45.78 GiB ou 2400 MB
-# renvoie le nombre converti en GB
-#
-# ATTENTION !
-#  1 GB  = 1000 * 1000 * 1000 bytes
-#  1 GiB = 1024 * 1024 * 1024 bytes = 1.0737 GB
-#----------------------------------------------------------
-def unusedDecodeNumber(s):
-    s=s.upper()
-    s=s.replace("," , ".")  
-    # on ne prend que la 1e partie dans 45.78 GiB  
-    tmp=s.split(" ")
-    tmp=tmp[0]
-    f=float(tmp)
-    # par defaut on considere que c'est des GB
-    # si on trouve un MB pour dire MB , on convertit 
-    # idem pour MIB GIB
-    if  s.find("MB") > -1 or s.find("MO") > -1 :
-        return f/1000
-    if  s.find("MIB") > -1 or s.find("MIO") > -1 :
-        return f * 1.024 * 1.024 / 1000
-    if  s.find("GIB") > -1 or s.find("GIO") > -1 :
-        return f * 1.024 * 1.024 * 1.024
-    return f
-
 #-----------------------------------------------------
 # Lit un bloc de lignes dans un fichier CSV
 #
@@ -82,4 +49,3 @@ def ReadCSV( filename,section ):
 
         #print(json.dumps( datalist, sort_keys=True, indent=4))
         return datalist
-

@@ -170,6 +170,8 @@ def _get_disk_info(fil: str) -> infosDict:
         "DisqueType": disk_type(rootdev)
     }
 
+    _logger.debug(f"infos disque principal = {retd}")
+
     snmaindisk = rootdev.get('serial', "inconnu")
     result = subprocess.run(["sudo", "lsblk", "-Jbd",
                              "-o", "name,type,size,rota,tran,vendor,model,fstype,mountpoint,serial"],
