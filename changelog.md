@@ -10,6 +10,10 @@ tar xzf linux-x.y.z.tgz
 ## Important
 *N'oubliez pas de lire le fichier ```README.pdf``` 😃*
 
+## 4.2.1
+
+- numéro de version corrigé!
+
 ## 4.2.0
 
 - une section "première fois…" a été ajoutée ici-même pour aider les débutant(e)s
