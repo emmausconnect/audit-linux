@@ -14,33 +14,36 @@
 #
 #====================================================================================
 
-
+import time
 import datetime
 import html
-import time
+import os.path
 import signal
+import json
+import zipfile
+import sys
+import logging
+
+from trace import Tracer
+DATESTAMP = time.strftime("%Y%m%d.%H%M%S", datetime.datetime.now().timetuple())
+_tracer = Tracer("audit-linux", DATESTAMP)
+_logger = _tracer.get_logger()
+_logger.setLevel(logging.DEBUG)
+_logger.info(f"Nom du fichier de trace: {_tracer.get_tracefilename()}")
 
 import tectech_data
-from  outils import *
+from outils import Browser, MakeZip, Editor, ChdirScript
+from outils import TransfertTectech, TransfertEmmaus, GetRemoteVersionInfo, DownloadFile
 from cpumark import FindCpuMark
-from categorie import *
-
-import logging
-_logger = logging.getLogger("audit-tectech")
-_logger.level = logging.DEBUG
-_hdlr = logging.StreamHandler()
-_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
-_hdlr.setFormatter(_formatter)
-_logger.addHandler(_hdlr)
+from categorie import ComputeCategorie, ComputeNote, ComputeNoteModif
+from  rtf import MakeRTF
+from ihm  import *
+from ux.linux import AuditMe, get_user_dirs, chown_to_user, Copy2Desktop, CopyFile2File
 
 from __about__ import __version__
+from ux.linux import TMPDISK, FILESCAN, TMPSCANFILE
 
-from  rtf import *
-from ihm  import *
-from ux.linux import *
-
-# Noms de fichiers
-ZIPFILE=os.path.join(TMPDISK, "audit-zip.zip"   )           # zip des fichiers à envoyer vers audits.emmaus-connect.org
+ZIPFILE=os.path.join(TMPDISK, "audit-zip.zip"   )   # zip des fichiers à envoyer vers audits.emmaus-connect.org
 
 FILEBOLC="bolc.csv"                 # fichier .csv pour import manuel dans le Bolc
 FILERAPPORT="audit.txt"             # fichier d'audit déposé sur le Bureau
@@ -255,7 +258,7 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
         for entry in it:
             if entry.is_file() :
                 filename = os.path.join(eciddir, entry.name)
-                #print( "**Suppresion: ", filename)
+                #_logger.info( "**Suppresion: ", filename)
                 os.remove( filename)
 
     filebolc = os.path.join(eciddir, f"{Admin.ECID}.{FILEBOLC}")
@@ -288,10 +291,10 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
     # Copie du rapport sur le Bureau et de DecouverteMonPC .  Le Bureau peut s'appeler Bureau ou Desktop
     # tobecopied = [ filerapport , filefiche, filedouchette, DECOUVERTE , fileparental]
     tobecopied = [DECOUVERTE , fileparental]
-    print(f"\nCopie de {tobecopied} sur le bureau")
+    _logger.info(f"Copie de {tobecopied} sur le bureau")
     code=Copy2Desktop(tobecopied)
     if not code:
-        print( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
+        _logger.warning( f"  !!! Je n'ai pas trouvé le Bureau : il faudra copier manuellement le rapport d'audit et {DECOUVERTE} ")
 
     # Rajout du détail des notes sur le rapport, avant de l'envoyer 
     MakeRapport(infdic, filerapport, header=True, details=True)
@@ -317,7 +320,7 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
     chown_to_user(eciddir)
 
     # Génération d'un .zip pour  envoi 
-    print(f"\nCreation du fichier: {ZIPFILE} pour envoi vers audits.emmaus-connect.org" )
+    _logger.info(f"Création du fichier: {ZIPFILE} pour envoi vers audits.emmaus-connect.org" )
     if os.path.isfile(ZIPFILE) :  os.remove(ZIPFILE)
     files= [ filebolc, filebolcimport, filerapport, filescan, filefiche, filedouchette , fileachat ]
     MakeZip( ZIPFILE , files )
@@ -336,14 +339,14 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
     else:
         exitcode="BOTH"
 
-    print(">" * 64)
-    print(f"{infdic=}")
-    print("<" * 64)
+    _logger.info(">" * 64)
+    _logger.info(f"{infdic=}")
+    _logger.info("<" * 64)
 
     if exitcode in [ "BOTH" ] :
-        print(f"\n========== Envoi des informations du fichier bolc {filebolcimportbase}"
-              f' vers le serveur tec.tech ({"PROD" if useprodapi else "TEST"}) ==========\n')
-        print(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
+        _logger.info(f"===== Les infos du fichier (BOLC) {filebolcimportbase} iront dans"
+              f' tec.tech ({"PROD" if useprodapi else "TEST"}) =====')
+        _logger.info(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
         TransfertTectech(filebolcimport, useprodapi, Admin.iddonlot, Admin.idrecond, Admin.ECID)
 
     if exitcode == "BOTH":
@@ -353,8 +356,9 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
             z.write(dest, os.path.basename(dest))
 
     if exitcode in ["EMMAUS", "BOTH"]:
-        print(f"\n-------------- envoi des fichiers vers audits.emmaus-connect.org  --------------")
+        _logger.info(f"=== Envoi des fichiers vers audits.emmaus-connect.org ===")
         TransfertEmmaus(ZIPFILE, Admin.ECID)
+        _logger.info(f"=== ...terminé ===")
 
 
     
@@ -374,7 +378,8 @@ def MakeRapport(infdic, filename, header, details):
 
     CRLF="\n"
 
-    if header : print("**Creation: " , filename)
+    if header:
+        _logger.info(f"Création de: {filename}")
 
     items=[
     f"======================= Rapport d'Audit  (Version={__version__}) ================",
@@ -460,7 +465,7 @@ def MakeFicheAchat(infdic, filename):
 #--------------------------------------------------
 def MakeFiches(infdic, filesmartphone, filedouchette):
 
-    print("**Creation: " ,filesmartphone ,  filedouchette)
+    _logger.info(f"Création de: {filesmartphone}, {filedouchette}")
 
     # taille de police
     small=9
@@ -572,7 +577,7 @@ def MakeBolc(infdic, filename):
 
     txt=";".join(items)
 
-    print("**Creation: " , filename)
+    _logger.info(f"Création de: {filename}")
     # newline="" est indispensable sous windows pour eviter que \n devienne CRLF
     with open(filename,"w",newline="") as f:
         f.write(txt + "\r\n")
@@ -585,25 +590,7 @@ def MakeBolc(infdic, filename):
 def BolcStatut():
 
     ecid=Ecid().Get()
-    liststatut=[
-            "A reconditionner",
-			"En reconditionnement",
-			"A entrer dans Salesforce",
-			"Prêt à vendre ",
-			"Prêt à donner",
-			"Réservé",
-			"Vendu",
-			"Donné ",
-			"Usage interne",
-			"SAV bénéficiaire",
-			"HS",
-			"perdu",
-			"Transféré",
-			"En attente ",
-			"Retour reconditionneur pro.",
-            "Utilisé"
-            ]
-    
+    liststatut = list(tectech_data.allowed_values["statut"])
     dialog=Zdialog("Changement du Status Bolc",5,5)
     vbox=dialog.area
     Ztext( vbox , f"Identifiant: {ecid}")
@@ -616,11 +603,11 @@ def BolcStatut():
     Zbutton(dialog, boxactions ,"OK", "OK","Yellow")
 
     out=dialog.Run()
-    #print(out)
+    #_logger.info(out)
     if out.get("OK","") == "" : return
     if out.get("STATUT","") == "" : return
 
-    print("Nouveau statut: " + out["STATUT"])
+    _logger.info("Nouveau statut: " + out["STATUT"])
 
     date= datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     site=ecid[0:2]
@@ -804,13 +791,13 @@ class Ecid:
 # Download  un .zip si la version dans version.txt est inferieure à celle sur le serveur
 #
 #------------------------------------------------------------------
-def ShowChange():
+def ShowChange(*args):
     Browser("https://audits.emmaus-connect.org/api/apps/linux/changelog/web")
 
 def UpdateMe():
     remotev, remotef, remoteu, remotes = GetRemoteVersionInfo()
 
-    print(f"Vérification Versions: Local={__version__} Serveur={remotev} \n")
+    _logger.info(f"Vérification Versions: Local={__version__} Serveur={remotev}")
     if __version__ == "" or remotev == "":
         return
 
@@ -820,76 +807,82 @@ def UpdateMe():
 
     if localvnew < remotevnew :
 
-        dlg=Zdialog( "Nouvelle Version !")
-        Ztext( dlg.area, f"Une version plus récente est disponible !\nVersion actuelle: {__version__}  \nVersion disponible: {remotev}" )
+        dlg=Zdialog("Nouvelle version!")
+        Ztext( dlg.area,f"Une version plus récente est disponible\n\tvotre version\t\t: {__version__}  \n  \tversion disponible\t: {remotev}")
         bbox=Zhbox(dlg.area)
-        Zbutton(dlg,bbox,"QUIT","IGNORER","orange")
-        Zbutton(dlg,bbox,"SHOW","Voir les Evolutions","lightgreen", ShowChange)
-        Zbutton(dlg,bbox,"GET","Downloader","yellow")
+        Zbutton(dlg,bbox,"QUIT","Ignorer","orange")
+        Zbutton(dlg,bbox,"SHOW","Voir les évolutions","lightgreen", ShowChange)
+        Zbutton(dlg,bbox,"GET","Télécharger","yellow")
         dlg.Run()
         exitcode=dlg.exitcode
 
         if exitcode in [ "QUIT" , "#QUIT" ] : return
 
-        dwnlfile = remotef
-        print(f"\nTéléchargement de {dwnlfile} en cours...\n")
+        DWLDIR = get_user_dirs()["download"]
+
+        dwnlfile = os.path.join(DWLDIR, remotef)
+        _logger.info(f"\nTéléchargement de {remotef} vers {dwnlfile} en cours...\n")
 
         ret = DownloadFile(remoteu, dwnlfile, remotes)
 
-        if ret  == "SUCCESS":
-            print (f"Téléchargement de {dwnlfile} réussi!\n")
-            exit()        
-        else:
-            print(ret)
+        if ret != "SUCCESS":
+            _logger.info(ret)
+            if os.path.isfile(dwnlfile):
+                os.remove(dwnlfile)
+            sys.exit(1)
+
+        chown_to_user(dwnlfile)
+        _logger.info (f"Téléchargement de {dwnlfile} réussi!\n")
+        sys.exit(0)
 
 
 #==============================================================================
 # Procedure d'Audit
 #
 #==============================================================================
-def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False):
+def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: str=""):
 
     # global infos # TRES important !
 
     Admin.ECID = Ecid().Get()
 
     # Audit du système et extraction des données
-    infos=AuditMe()
+    infos=AuditMe(datestamp=datestamp)
 
     # Si le materiel est declaré comme tablette, on force le type
     if len(Admin.ECID) > 4 and Admin.ECID[2:4] == "TA":
         infos["Type"]= "Tablette"
 
-    #print(infos)
+    #_logger.info(infos)
 
     # Recherche de la note CPU
     proc = infos["Processeur"]
-    print(f"\n----------------- Recherche de la note du processeur {proc} ----------------------")
+    # _logger.info(f"----------------- Recherche de la note du processeur {proc} ----------------------")
     cpumark = FindCpuMark(proc)
-    print(f"La note >{cpumark}< a été trouvée pour {proc}")
+    _logger.info(f"La note >{cpumark}< a été trouvée pour >{proc}<")
 
     # Saisie d'infos complémentaires, y compris le cpumark si pas trouvé
-    print("\n------------ Saisie manuelle d'informations --------------------")
+    _logger.info("------------ Saisie manuelle d'informations --------------------")
     ManualTechInfos(infos,cpumark)
 
-    print("\n------- Infos (Gio pour la mémoire, Go pour les disques) -------")
+    _logger.info("------- Informations trouvées (mémoire en Gio, disques en Go) -------")
     for key,value in infos.items():
-        print(f"{key:<20}: {value}")
+        _logger.info(f"{key:<20}: {value}")
 
     if infos["DisqueType"] == "SSD":
         ouinon = "NVME" if infos.get("NVME") == "oui" else "ATA"
     else:
         ouinon = "N/A"
-    print(f"{'NVME/ATA':<20}: {ouinon}")
+    _logger.info(f"{'NVME/ATA':<20}: {ouinon}")
 
-    #print(json.dumps( infos, sort_keys=False, indent=4))
-
-
+    #_logger.info(json.dumps( infos, sort_keys=False, indent=4))
 
 
 
 
-    print("\n----------------- Calcul des notes  ----------------------")
+
+
+    _logger.info("----------------- Calcul des notes  ----------------------")
 
     tmptxtnotes=[]
     sectionnote="#NOTE-" + OSTARGET.upper()  
@@ -900,12 +893,12 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False):
 
     Admin.notenet=ComputeNoteModif( infos, CSVREGLES, "#MODIF" , Admin.txtnotes, Admin.notebrut )
 
-    print( "\n".join(Admin.txtnotes)  )
+    _logger.info( ", ".join(Admin.txtnotes)  )
 
-    print(f"\nNote finale={Admin.notenet}")
+    _logger.info(f"Note finale={Admin.notenet}")
 
     Admin.categorie=ComputeCategorie( CSVREGLES,Admin.notenet)
-    print(f"Categorie={Admin.categorie}")
+    _logger.info(f"Categorie={Admin.categorie}")
 
     #------------------- affichage rapide ------------------------
     filename=os.path.join( TMPDISK , "infos.txt")
@@ -921,7 +914,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False):
     # si on n'a pas cliqué OK, les informations saisies sont invalides, et peuvent provoquer bugs
     if result.get("OK","") == "" : return 
 
-    #print(result)
+    #_logger.info(result)
     Admin.nomcomm=result["nomcomm"]
     Admin.benevole=result["benevole"]
     Admin.observations=result["observations"]
@@ -931,7 +924,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False):
     Admin.iddonlot=result["iddonlot"]
 
 
-    print("\n----------------- Création et envoi des fichiers vers audits.emmaus-connect.org  et Bolc ----------------------")
+    _logger.info("----------------- Création et envoi des fichiers vers audits.emmaus-connect.org et tec.tech ----------------------")
     Admin.auditdate= datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     MakeSendFiles(infos, useprodapi, xfer)
@@ -949,7 +942,7 @@ def GetPasswd():
 
 #=============================== Main ==============================
 def signal_handler(sig, frame):
-    print(f"Caught {sig} at {frame}. Exiting...")
+    _logger.info(f"Caught {sig} at {frame}. Exiting...")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -972,8 +965,8 @@ if __name__ == '__main__':
     #   python3 -B audit.py [PROD|TEST]             # [3] id will we requested
     #   python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] works with tec.tech (case-insensitive)
 
-    _logger.level = logging.DEBUG
-    _logger.debug(sys.argv)
+    # _logger.level = logging.DEBUG
+    _logger.info(sys.argv)
     prod_or_test_ = ["PROD", "TEST"]
     n_ = len(sys.argv) - 1
     nopc_ = None
@@ -1003,10 +996,10 @@ if __name__ == '__main__':
 
     # sys.exit(0)
 
-    ProcessAudit(mini=False, useprodapi=useprodapi_)
+    ProcessAudit(mini=False, useprodapi=useprodapi_, datestamp=DATESTAMP)
 
     # global infos
-    # print(infosdict)
+    # _logger.info(infosdict)
     # _logger.info(f"infos = {infosdict}")
 
     # _logger.info(f"Liste des symboles globaux")

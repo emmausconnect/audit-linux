@@ -4,11 +4,12 @@
 #####################################################################
 import os
 
+from trace import Tracer
+_logger = Tracer().get_logger()
+
 # On se protege contre le cas où le module qrcode n'est pas installé
 try:
     import qrcode
-
-    print(f">{qrcode=}<")
 
     #--------------------------------------------------------------
     # Transforme un texte en qrcode
@@ -17,7 +18,7 @@ try:
     #---------------------------------------------------------------
     def MakeQR( txt , filename ):
 
-        print(f"MakeQR({txt=}, {filename=})")
+        _logger.debug(f"MakeQR({txt=}, {filename=})")
 
         # fabrique le qrcode
         qr = qrcode.QRCode( version=6, error_correction=qrcode.constants.ERROR_CORRECT_Q, box_size=10, border=4 )

@@ -3,24 +3,13 @@ import sys
 import json
 import platform
 import subprocess
-import time
-import datetime
 import logging
 import glob
 import re
 from math import sqrt
 
-_logger = logging.getLogger("characteristics")
-_logger.level = logging.DEBUG
-_hdlr = logging.StreamHandler()
-_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
-_hdlr.setFormatter(_formatter)
-_logger.addHandler(_hdlr)
-
-
-datestamp = time.strftime("%Y%m%d.%H%M%S", datetime.datetime.now().timetuple())
-LSHWFILE = f"/tmp/lshw-{datestamp}.json"
-LSBLKFILE = f"/tmp/lsblk-{datestamp}.json"
+from trace import Tracer
+_logger = Tracer().get_logger()
 
 GiB = 1024 * 1024 * 1024
 GB = 1000 * 1000 * 1000
@@ -83,7 +72,7 @@ def _get_platform_info(fil: str) -> infosDict:
                             env={**os.environ, "LC_ALL": "C"})
     with open(fil, "w") as f:
         f.write(result.stdout)
-    _logger.info(f"Les données générales (lshw) on été sauvegardées dans {fil}")
+    _logger.debug(f"Les données générales (lshw) on été sauvegardées dans {fil}")
 
     # with open(fil, 'r') as jf:
     #     j = json.load(jf)
@@ -140,7 +129,7 @@ def _get_disk_info(fil: str) -> infosDict:
                             capture_output=True, text=True)
     with open(fil, "w") as f:
         f.write(result.stdout)
-    _logger.info(f"Les données relatives aux disques (lsblk) on été sauvegardées dans {fil}")
+    _logger.debug(f"Les données relatives aux disques (lsblk) on été sauvegardées dans {fil}")
 
     bdevs = json.loads(result.stdout)['blockdevices']
 
@@ -222,10 +211,12 @@ def _get_battery_health() -> str:
     return ""
 
 
-def get_machine_infos() -> infosDict:
+def get_machine_infos(datestamp: str) -> infosDict:
+    lshwfile = f"/tmp/lshw-{datestamp}.json"
+    lsblkfile = f"/tmp/lsblk-{datestamp}.json"
 
-    dplf = _get_platform_info(LSHWFILE)
-    dblk = _get_disk_info(LSBLKFILE)
+    dplf = _get_platform_info(lshwfile)
+    dblk = _get_disk_info(lsblkfile)
     dcam = _look_for_webcam()
     mon = _get_monitor_size()
     bat = _get_battery_health()
@@ -249,7 +240,7 @@ def get_machine_infos() -> infosDict:
 
 
 if __name__ == "__main__":
-    infos_ = get_machine_infos()
+    infos_ = get_machine_infos("19610306.103088")
     _logger.debug(infos_)
     sys.exit(0)
 

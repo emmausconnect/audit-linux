@@ -12,9 +12,7 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 
 - pour l'outil, l'identifiant utilisé pour désigner un matériel est toujours son "ID ESN" (```idEsn``` dans l'API tec.tech) conforme à la notation utilisée par l'outil dans le contexte BOLC. Par exemple: ```GRPC26-0043```
 
-- l'outil a subi les tests de base mais est encore jeune; il est fortement recommandé de lire les [notes d'évolution](https://audits.emmaus-connect.org/api/apps/linux/changelog/web) et de se familiariser avec l'outil sur la base tec.tech de test (voir ci-dessous)
-
-- pour la même raison, l'outil est encore assez verbeux, dans le but d'aider à la mise au point
+- l'outil a été testé mais est encore jeune; il est fortement recommandé de lire les [notes d'évolution](https://audits.emmaus-connect.org/api/apps/linux/changelog/web) et de se familiariser avec l'outil sur la base tec.tech de test (voir ci-dessous)
 
 - certaines des données qui allaient dans le BOLC n'ont pas de point de chute naturel dans tec.tech. L'outil les regroupe dans le champ "commentaire" de tec.tech
 
@@ -26,6 +24,15 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 - le fichier se décompresse avec une commande qui créera localement un répertoire ```audit-linux-x.y.z``` contenant l'outil:
 ```
 tar xzf linux-x.y.z.tgz
+```
+
+# Rapporter des anomalies, faire des suggestions, …
+
+Pour des questions générales ou des suggestions, je suggère d'utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
+
+Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution depuis la ```4.3.0```. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
+```
+[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
 ```
 
 
@@ -52,7 +59,7 @@ Les valeurs de ```client_id``` et de ```client_secret``` sont propres à chaque 
 
 L'outil s'appelle directement avec le script ```audit.sh```. Le script ```menu.sh``` ne doit pas être utilisé pour faire de l'audit.
 
-Il y a ensuite plusieurs façons lancer l'audit, selon qu'on veut fournir l'*idEsn* sur la ligne de commande et selon qu'on choisit d'accéder à la base de tec.tech de test ([https://tec-tech.osc-fr1.scalingo.io](https://tec-tech.osc-fr1.scalingo.io)) ou celle de prod ([https://tec-tech-prod.osc-fr1.scalingo.io](https://tec-tech-prod.osc-fr1.scalingo.io))
+Il y a ensuite plusieurs façons lancer l'audit, selon qu'on veut fournir l'*idEsn* sur la ligne de commande et selon qu'on choisit d'accéder à la base tec.tech de test ([https://tec-tech.osc-fr1.scalingo.io](https://tec-tech.osc-fr1.scalingo.io)) ou à celle de prod ([https://tec-tech-prod.osc-fr1.scalingo.io](https://tec-tech-prod.osc-fr1.scalingo.io)).
 
 Les différentes façons d'appeler l'outil sont (on prend l'*idEsn* ```GRPC26-0043``` comme exemple):
 ```
@@ -108,10 +115,3 @@ De façon générale, à ma connaissance, la notion de doublon n'est pas défini
 - les paramètres sont convertis en majuscules avant exploitation
 
 - les gestionnaires de tec.tech demandent à ce qu'on économise les jetons d'accès à la base; pour cela, l'outil stocke le jeton qu'il a acquis dans un fichier local ```token-test.json``` (ou ```token-prod.json```) puis l'utilise tant qu'il est valide; il est donc important que l'outil puisse écrire dans le répertoire ou se trouve audit.sh
-
-
-## Rapporter des anomalies, faire des suggestions, etc.
-
-Dans cette première phase d'exploitation, je suggère d'utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
-
-Pour la suite, cela reste encore à décider...

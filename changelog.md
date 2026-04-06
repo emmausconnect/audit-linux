@@ -7,12 +7,26 @@
 tar xzf linux-x.y.z.tgz
 ```
 
-## Important
-*N'oubliez pas de lire le fichier ```README.pdf``` 😃*
+### Et toujours: n'oubliez pas de lire le fichier README.pdf 😃
+
+
+## 4.3.0
+
+Cette version est importante quoique quasiment *cosmétique*. Vu des utilisateurs, l'intention est de marquer une pause dans les modifications fonctionnelles en attendant un plus large retour d'expérience.
+
+- les actions du menu principal (lancé avec ```menu.sh```) et qui impliqueraient une interaction avec tec.tech ont été supprimées de ce menu
+
+- quand une nouvelle version est téléchargée, elle va désormais dans ```${HOME}/Téléchargements``` (ou son équivalent pour les langues autres que le français)
+
+- l'affichage de messages au fil de l'exécution a été entièrement revu:
+  - seuls les messages les plus importants apparaissent dans la console
+  - tous les messages pouvant aider au debug vont dans un fichier de trace dont l'usage est décrit dans README.pdf
+
 
 ## 4.2.1
 
 - numéro de version corrigé!
+
 
 ## 4.2.0
 

@@ -14,6 +14,9 @@ import os
 import subprocess
 import sys
 
+from trace import Tracer
+_logger = Tracer().get_logger()
+
 TMPDISK="/tmp"                                  # répertoire où sont générés les fichiers temporaires.
 
 FILESCAN="scan-linux.txt"  # fichier contenant le scan système qu'on copie sur drop.tf
@@ -34,9 +37,9 @@ def SystemScan(inxifile):
 #  renvoie infos : dictionnaire de valeurs
 #------------------------------------------
 from ux.characteristics import get_machine_infos
-def AuditMe():
-    infostmp =  get_machine_infos()
-    print(infostmp)
+def AuditMe(datestamp: str):
+    infostmp =  get_machine_infos(datestamp=datestamp)
+    _logger.debug(infostmp)
     SystemScan(TMPSCANFILE)  # keep those legacy parts around for now
     return infostmp
 
@@ -58,21 +61,32 @@ def userhomeparams() -> (bool, str, int, int):
 
 def chown_to_user(somepath: str) -> None:
     # this is a convenience function; in our context, we don't really care if the ownership change fails
-    print(f"chown_to_user({somepath=}")
+    _logger.debug(f"chown_to_user({somepath=}")
 
     insudo, enduserrootdir, enduseruid, endusergid = userhomeparams()
-    print(f"{insudo=}, {enduserrootdir=}, {enduseruid=}, {endusergid=}")
+    _logger.debug(f"{insudo=}, {enduserrootdir=}, {enduseruid=}, {endusergid=}")
 
     if os.path.isfile(somepath):
         if insudo:
             cmd = f"chown {enduseruid}:{endusergid} {somepath}"
-            print(cmd)
+            _logger.debug(cmd)
             os.system(cmd)
     if os.path.isdir(somepath):
         if insudo:
             cmd = f"chown -R {enduseruid}:{endusergid} {somepath}"
-            print(cmd)
+            _logger.debug(cmd)
             os.system(cmd)
+
+
+def get_user_dirs() -> dict[str, str]:
+    keys = ["desktop", "download", "documents"]
+    udirs = dict.fromkeys(keys, "")
+    for k in keys:
+        try:
+            udirs[k] = subprocess.check_output(["xdg-user-dir", f"{k.upper()}"], text=True).strip()
+        except (RuntimeError, Exception):
+            pass
+    return udirs
 
 
 #-----------------------------------------------------------
@@ -82,17 +96,12 @@ def chown_to_user(somepath: str) -> None:
 #-----------------------------------------------------------
 def Copy2Desktop(files):
 
-    print(f"Copy2Desktop({files = })")
-    BUREAU=""
+    _logger.debug(f"Copy2Desktop({files = })")
     suu, enduserrootdir = asroot()
+    BUREAU = get_user_dirs()["desktop"]
 
-    for b in [ "Bureau" ,"Desktop"]:
-        bname = os.path.join(enduserrootdir, b)
-        if os.path.isdir(bname):
-            BUREAU = bname
-
-    # print(f"{BUREAU=}, {insudo=}, {enduserrootdir=}, {enduseruid=}, {endusergid=}")
-    print(f"{BUREAU=}, {enduserrootdir=}")
+    # _logger.debug(f"{BUREAU=}, {insudo=}, {enduserrootdir=}, {enduseruid=}, {endusergid=}")
+    _logger.debug(f"{BUREAU=}, {enduserrootdir=}")
     if BUREAU != "":
         for name in files:
             dst = os.path.join(BUREAU, name)
@@ -119,7 +128,7 @@ def CopyDir( src, dstdir):
 
 
 if  __name__ == "__main__":
-    infos_ = AuditMe()
+    infos_ = AuditMe("19610306.103088")
 
     # infos_ = infos
     # infos_ = get_machine_infos()

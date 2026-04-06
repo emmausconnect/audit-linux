@@ -1,26 +1,19 @@
-
-import json
-import re
-import sys
-import datetime
-import os
-import time
+# import json
+# import re
+# import sys
+# import datetime
+# import os
+# import time
 
 from outils import *
-
+from ux.linux import get_user_dirs
 
 #--------------------------------------------------------
 # renvoie le nom du Bureau
 #   "" si pas trouvé
 #--------------------------------------------------------
 def GetBureau():
-    HOME = os.environ["HOME"]
-
-    for b in [ "Bureau" ,"Desktop"]:
-        bname=os.path.join(  HOME , b )
-        if os.path.isdir(bname):  return bname
-
-    return ""
+    return get_user_dirs()["desktop"]
 
 
 #--------------------------------------------------------

@@ -1,18 +1,12 @@
 import sys
 import json
 import urllib.request, urllib.error, urllib.parse
-import logging
+from trace import Tracer
+_logger = Tracer().get_logger()
 
 # http.client.HTTPConnection.debuglevel = 1
 USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 MARKSAPIURL = "https://audits.emmaus-connect.org/api/cpu"
-
-_logger = logging.getLogger("cpumark")
-_logger.level = logging.DEBUG
-_hdlr = logging.StreamHandler()
-_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
-_hdlr.setFormatter(_formatter)
-_logger.addHandler(_hdlr)
 
 # $ curl -sk 'https://audits.emmaus-connect.org/api/cpu/Intel(R)%20Core(TM)%20i5-1145G7%20@%202.60GHz%20(1.50%20GHz)' | jq -r '.'
 # {
@@ -69,10 +63,10 @@ def FindCpuMark(cpuname: str):
 if  __name__ == "__main__":
     p = "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz"
     m = FindCpuMark(p)
-    print(f"Mark >{m}< found for '{p}'")
+    _logger.info(f"Mark >{m}< found for '{p}'")
 
     p = "prout de gros caca"
     m = FindCpuMark(p)
-    print(f"Mark >{m}< found for '{p}'")
+    _logger.info(f"Mark >{m}< found for '{p}'")
 
     sys.exit(0)

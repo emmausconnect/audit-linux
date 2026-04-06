@@ -2,17 +2,13 @@ import sys
 import platform
 import argparse
 import json
-import logging
+
+from trace import Tracer
+_logger = Tracer().get_logger()
 
 import tectech_data
 from tectech import TecTapiBolcFileConversionError
-
-_logger = logging.getLogger("convert_bolc_to_tectech")
-_logger.level = logging.DEBUG
-_hdlr = logging.StreamHandler()
-_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
-_hdlr.setFormatter(_formatter)
-_logger.addHandler(_hdlr)
+from __about__ import __version__
 
 # BOLC import file example
 # 3337;;GRPC26-0008;Portable;B;Prêt à vendre;;Apple;;;MacBookPro12,1;75.4%;;;C02SX6JJFVH4;Intel Core i5-5257U;SSD;251;;;9;;;13.3;0;0;2837;;Rudy;26/01/2026 15:17:45;Linux: Linux Mint 22.2 Zara;;;;ESN
@@ -179,6 +175,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         d['commentaire'] += f" / Observations: {vals[13]} / PondTech: {vals[24]} / PondEsth: {vals[25]}"
         d['commentaire'] += f" / Bénévole: {vals[28]} / Origine: {vals[34]}"
         d['commentaire'] += f" / {platform.freedesktop_os_release()['PRETTY_NAME']}"
+        d['commentaire'] += f" / audit-linux-{__version__}"
 
 
     except (TecTapiBolcFileConversionError, Exception) as exc:
@@ -219,7 +216,7 @@ if __name__ == "__main__":
     try:
         d_ = from_bolc_to_tectech(vals_, idlot_, idStock_, idmaterielreconditionneur_)
     except(TecTapiBolcFileConversionError, Exception) as exc_:
-        print(exc_)
+        _logger.error(exc_)
         d_ = {}
 
     ds_ = json.dumps([d_]).encode('utf-8')

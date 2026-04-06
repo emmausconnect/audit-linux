@@ -143,12 +143,12 @@ class Zbutton():
         return self.value
 
     # cliquer le bouton provoque la sortie si action=None, ou lance cette action
-    def on_button_clicked(self, widget):
+    def on_button_clicked(self, *args):
         self.value=self.id
         if self.action is None:
             self.owner.Exit(self.id)
         else:
-            self.action(self.owner,self.id)
+            self.action(*args)
 
     # Créer et appliquer la CSS 
     def apply_css(self,newclass,color):

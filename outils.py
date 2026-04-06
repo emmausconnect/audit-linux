@@ -6,8 +6,12 @@
 import sys,os
 import json
 import zipfile
-import http.client  # actually no longer used
+import subprocess
+# import http.client  # actually no longer used
 import urllib.request, urllib.error
+
+from trace import Tracer
+_logger = Tracer().get_logger()
 
 import tectech
 from convert_bolc_to_tectech import from_bolc_to_tectech
@@ -96,10 +100,10 @@ def GetRemoteVersionInfo() -> (str, str, str, int):
             body = response.read()
             status = response.status
     except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
-        print(f'La recherche de la dernière version a échoué ({exc})')
+        _logger.warning(f'La recherche de la dernière version a échoué ({exc})')
         return defret
     if status != 200:
-        print(f'La recherche de la dernière version a échoué (status={status})')
+        _logger.warning(f'La recherche de la dernière version a échoué (status={status})')
         return defret
     d = json.loads(body.decode("utf-8"))
     return d['version'], d['final_filename'], d['download_url'], d['size']
@@ -108,79 +112,81 @@ def GetRemoteVersionInfo() -> (str, str, str, int):
 def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "", idmatrecond: str = "", ecid: str= ""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
-    print("=== Transfert à faire vers tec.tech ===")
+    _logger.info("=== Transfert à faire vers tec.tech ===")
 
     with open(filebolcimport, 'r') as bf:
         line = bf.readline().strip('\n')  # we carelessly read a single line and assume it is what we want
     vals = line.split(';')
-    print(f"Données récupérées de {filebolcimport}:\n{vals}")
+    _logger.info(f"Données récupérées de {filebolcimport}:\n{vals}")
 
     tokfil = "token-test.json" if not useprodapi else "token-prod.json"
-    print(f'fichier jeton: {tokfil}')
+    _logger.info(f'fichier jeton: {tokfil}')
     try:
         api = tectech.TecTAPI(useprodapi=useprodapi, credsfile="tectech-credentials.json", tokenfile=tokfil)
     except Exception as exc:
-        print(f"Impossible de créer l'objet tectech.TecTAPI ({exc})")
+        _logger.error(f"Impossible de créer l'objet tectech.TecTAPI ({exc})")
         sys.exit(1)
-    print(f'base utilisée: {api.prefix}')
-    print(f'jeton        : {api.token[0:32]} ... {api.token[-32:]}')
-    print(f'créé le      : {api.tokencreationtimestr}')
-    print(f'se périme le : {api.tokenexpirytimestr}')
+    _logger.info(f'base utilisée: {api.prefix}')
+    _logger.info(f'jeton        : {api.token[0:32]} ... {api.token[-32:]}')
+    _logger.info(f'créé le      : {api.tokencreationtimestr}')
+    _logger.info(f'se périme le : {api.tokenexpirytimestr}')
 
     try:
         mypc = api.lookup_equipment(vals[2], vals[14])
     except Exception as exc:
-        print(f"Erreur lors de la recherche de {vals[2]}/{vals[14]} ({exc})")
+        _logger.error(f"Erreur lors de la recherche de {vals[2]}/{vals[14]} ({exc})")
         sys.exit(1)
 
     if mypc:  # mise à jour d'équipement
-        print(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
+        _logger.info(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
         d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
                                  idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
         d['id'] = mypc['id']
-        print(f"Dictionnaire à envoyer à tec.tech\n{d}")
+        _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
 
         # ds = json.dumps([d]).encode('utf-8')
-        # print(f"Le même encodé juste avant XPUT\n{ds}")
+        # _logger.info(f"Le même encodé juste avant XPUT\n{ds}")
 
         mynewpc = {}
         try:
-            # print("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+            # _logger.info("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
             mynewpc = api.update_equipment(d)
         except Exception as exc:
-            print(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
+            _logger.error(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+        _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
-        print(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
+        _logger.info(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
         d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond)
-        print(f"Dictionnaire à envoyer à tec.tech\n{d}")
+        _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
         mynewpc = {}
         try:
-            # print("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+            # _logger.info("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
             mynewpc = api.create_equipment(d)
         except Exception as exc:
-            print(f"La création de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
-        print(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
+            _logger.error(f"La création de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+        _logger.info(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
 
     # we trustfully use the existing naming scheme...
     dest = os.path.join("..", ecid, f"{ecid}.tect.csv")
     try:
         api.create_tectech_csvfile(mynewpc[0], dest)
     except Exception as exc:
-        print(f"La création de {dest} a échoué ({exc})")
+        _logger.error(f"La création de {dest} a échoué ({exc})")
     # else:
-    #     print(f"{dest} aurait dû être créé...")
+    #     _logger.info(f"{dest} aurait dû être créé...")
 
-    print("=== Transfert vers tec.tec terminé ===")
+    _logger.info("=== Transfert vers tec.tec terminé ===")
     return
 
 
 def TransfertEmmaus(zf, ecid):
     xak = "0972dd465681b821e567d65f"
-    cmd=f'curl -X POST https://audits.emmaus-connect.org/api/upload/zip -F "ecid={ecid}" -F "actual_file=@{zf}" '
-    cmd += f'--write-out "\n" -H "X-API-Key: {xak}"'
-    os.system(cmd)
-
+    desturl = "https://audits.emmaus-connect.org/api/upload/zip"
+    cmd = ["curl", "-s", "-X", "POST", f"{desturl}", "-F", f"ecid={ecid}",
+           "-F", f"actual_file=@{zf}", "-H", f"X-API-Key: {xak}"]
+    result = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"})
+    _logger.debug(f"result.stderr = {result.stderr}")
+    _logger.debug(f"result.stdout = {result.stdout}")
 
 if __name__ == '__main__':
     pass

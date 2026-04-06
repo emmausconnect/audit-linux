@@ -3,10 +3,13 @@ import sys
 import json
 import urllib.request, urllib.error
 import argparse
-import logging
 from datetime import datetime, timedelta
 import re
 import csv
+
+from trace import Tracer
+_logger = Tracer().get_logger()
+
 import tectech_data
 from ux.linux import chown_to_user
 
@@ -18,15 +21,6 @@ UNIQUESHA1 = "2999a9e7680a2fa2a152d65dbd43be43f9c7e03e"
 PREPRODAPIURL = "https://tec-tech.osc-fr1.scalingo.io/api"
 PRODAPIURL = "https://tec-tech-prod.osc-fr1.scalingo.io/api"
 USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
-
-
-_logger = logging.getLogger("tectech")
-_logger.level = logging.DEBUG
-_hdlr = logging.StreamHandler()
-_formatter = logging.Formatter('[%(levelname)-7s] %(filename)s(%(lineno)d): %(message)s')
-_hdlr.setFormatter(_formatter)
-_logger.addHandler(_hdlr)
-
 
 class IdesnParser:
     __esnspat = "|".join(['BX', 'CR', 'GR', 'LI', 'LV', 'LY', 'MA', 'MB', 'RO', 'SD', 'ST', 'VI'])
@@ -364,7 +358,7 @@ class TecTAPI:
 
     @classmethod
     def lookup_equipment(cls, idesn: str, numeroserie: str="") -> dict:
-        _logger.info(f"Recherche de l'équipement {idesn}, {numeroserie=}")
+        _logger.info(f"Recherche de l'équipement {idesn=}, {numeroserie=}")
         # look for a "materiel" in tec.tech, based only on idEsn and numeroSerie
         epmateriel = "materiel"
         limit = 2
@@ -396,6 +390,7 @@ class TecTAPI:
             raise TecTapiDuplicateEquipmentFound(errmsg)
 
         if nb == 1:
+            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idEsn")
             return d['data'][0]
 
         # nb is certainly 0!
@@ -408,6 +403,7 @@ class TecTAPI:
             raise TecTapiEquipmentNotFound from exc
 
         if d:
+            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur==idEsn")
             return d
 
         _logger.warning(f'La recherche de {idesn} par idMaterielReconditionneur a échoué')
@@ -421,7 +417,7 @@ class TecTAPI:
         except (TecTapiEquipmentNotFound, Exception) as exc:
             raise TecTapiEquipmentNotFound from exc
         else:
-            _logger.info(f'La recherche de {numeroserie} par numeroSerie a rendu {d}')
+            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
             return d
 
 
@@ -609,7 +605,7 @@ class TecTAPI:
                 writer.writeheader()
                 writer.writerow(d)
             chown_to_user(destfile)
-            _logger.info(f"Écriture de {destfile} terminée")
+            _logger.info(f"...écriture de {destfile} terminée")
         except Exception as exc:
             errmsg = f"La création du fichier CSV a échoué ({exc})"
             raise TecTapiCsvFileCreationFailed(errmsg) from exc
@@ -641,8 +637,8 @@ if __name__ == "__main__":
     if args_.debug:
         args_.verbose = True
 
-    if args_.verbose or not args_.production:
-        _logger.setLevel(logging.INFO)
+    # if args_.verbose or not args_.production:
+    #     _logger.setLevel(logging.INFO)
 
     for i_ in sorted(vars(args_).items()):
         _logger.info(f'{i_[0]:<12}: {i_[1]}')
@@ -666,7 +662,7 @@ if __name__ == "__main__":
     numserS_ = [sn_, ""]
     cas_ = [(a, b, c) for a in idesnS_ for b in idmatrecS_ for c in numserS_]
     for _ in cas_:
-        print(f"     idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]}")
+        _logger.info(f"     idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]}")
     # (output redacted)
     # There are 4 relevant test cases
     #      idEsn=GRPC26-9999  idMaterielReconditionneur=GRPC26-9999     numeroSerie=2CE347155K
@@ -680,7 +676,7 @@ if __name__ == "__main__":
 
     cas_ = [(a, b, c) for a in idesnS_ for b in idmatrecS_ for c in numserS_ if c]
     for _ in cas_:
-        print(f"Make sure that idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]} on TECT side")
+        _logger.info(f"Make sure that idEsn={_[0]:11}  idMaterielReconditionneur={_[1]:14}  numeroSerie={_[2]} on TECT side")
         try:
             d_ = api_.lookup_equipment_by_id(id_)
             _logger.info(f"{d_=}")
