@@ -7,7 +7,7 @@
 # categorie=    ComputeCategorie( csvregles , finalnote)
 #
 #####################################################################################
-from common import *
+from common import ReadCSV
 
 #--------------------------------------------------
 # Calcule la categorie 

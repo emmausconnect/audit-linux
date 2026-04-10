@@ -58,7 +58,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
     # with a mandatory "id", and values compliant with specific types for other fields
     # Here, we will leave "id" aside and provide as many other fields as we can
     bolc_to_tectech_types = {
-        "UC": "ORDINATEUR_FIXE",
+        "Fixe": "ORDINATEUR_FIXE",
         "Portable": "ORDINATEUR_PORTABLE",
         "Tablette": "TABLETTE"
     }
@@ -96,7 +96,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         d['idMaterielReconditionneur'] = idmaterielreconditionneur
         # 2: Admin.ECID,                 # identifiant EmmausEC
         d['idEsn'] = vals[2]
-        # 3: infos["Type"],              # type de matériel ( Portable , UC )
+        # 3: infos["Type"],              # type de matériel (Portable, Fixe, Tablette)
         d['typeMateriel'] = bolc_to_tectech_types[vals[3]]
         # 4: Admin.categorie,            # categorie  A B C D Premium INVENDABLE
         d['categorie'] = vals[4].upper()
@@ -168,7 +168,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         else:
             d['idStock'] = esn_to_idstock.get(vals[2][0:2])
             if not d['idStock']:
-                raise
+                raise ValueError(f"{vals[2][0:2]} n'a pas de stock de rattachement connu")
 
         # 'commentaire' will hold some of the BOLC fields that fit nowhere in tec.tech structure
         d['commentaire'] = f"cpumark: {vals[26]} / Batterie: {vals[11]} / Écran: {vals[23]}"

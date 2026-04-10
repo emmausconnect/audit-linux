@@ -75,7 +75,7 @@ class Token:
         if Token.__is_initialized:
             return
 
-        uniquetmpfile = f"token-prod.json" if "prod" in prefix else f"token-test.json"
+        uniquetmpfile = "token-prod.json" if "prod" in prefix else "token-test.json"
 
         if not tokenfile:
             # # this is a trick: when no token file is specified, we force a non-existing file so that the Token
@@ -480,7 +480,8 @@ class TecTAPI:
                 body = response.read()
                 status = response.status
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            # errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg) from exc
         except Exception as exc:
@@ -549,7 +550,7 @@ class TecTAPI:
                 body = response.read()
                 status = response.status
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            errmsg = f'Erreur serveur lors de la création de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            errmsg = f'Erreur serveur lors de la création de {idesn} ({exc.code}: {exc.reason})'
             # _logger.error(errmsg)
             raise TecTapiCreationFailed(errmsg) from exc
         except Exception as exc:
@@ -708,7 +709,7 @@ if __name__ == "__main__":
     pcpr_ = "GRPC26-9999"
     grpc26_9999_ = api_.lookup_equipment(pcpr_)
     if grpc26_9999_:
-        _logger.info(f"GRPC26-9999 existe déjà; on va faire une mise à jour")
+        _logger.info("GRPC26-9999 existe déjà; on va faire une mise à jour")
         mygrpc26_9999_ = api_.update_equipment(grpc26_9999_)
     else:  # il s'agit d'une création
         d_ = {'idLot': 'L-0048', 'idMaterielReconditionneur': 'EM_2602_9999', 'idEsn': pcpr_,

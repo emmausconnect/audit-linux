@@ -147,7 +147,7 @@ def ManualTechInfos(infdic, cpumark):
         Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , "0")
 
         # autres infos
-        pctypes=[ "Portable" , "Tablette", "UC" ]
+        pctypes=["Portable", "Fixe", "Tablette"]
         # index=0
         # for i,value in enumerate(pctypes):
         #     if value==infosdict["Type"] : index=i
@@ -356,9 +356,9 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
             z.write(dest, os.path.basename(dest))
 
     if exitcode in ["EMMAUS", "BOTH"]:
-        _logger.info(f"=== Envoi des fichiers vers audits.emmaus-connect.org ===")
+        _logger.info("=== Envoi des fichiers vers audits.emmaus-connect.org ===")
         TransfertEmmaus(ZIPFILE, Admin.ECID)
-        _logger.info(f"=== ...terminé ===")
+        _logger.info("=== ...terminé ===")
 
 
     
@@ -386,13 +386,13 @@ def MakeRapport(infdic, filename, header, details):
     f" IDENTIFIANT     : {Admin.ECID}  ",
     f" DATE            : {Admin.auditdate}    ",
     f" REALISE PAR     : {Admin.benevole}  ",
-    f"=================================================================================",
-    f"",
+    "=================================================================================",
+    "",
     ]
 
     txt1=CRLF.join(items) + CRLF
 
-    txt2=    f"✅--------------------------- Informations (Gio pour la mémoire, Go pour les disques) ------------------" +CRLF + CRLF
+    txt2=    "✅--------------------------- Informations (Gio pour la mémoire, Go pour les disques) ------------------" +CRLF + CRLF
     for key,value in infdic.items():
         # astuce pour remplacer la valeur numerique des cles SSD et HDD
         # if key in [ "SSD","HDD" ] : value="oui"
@@ -407,14 +407,14 @@ def MakeRapport(infdic, filename, header, details):
 
 
     items=[
-    f"",
-    f"✅--------------------------- Notes -----------------------------",
+    "",
+    "✅--------------------------- Notes -----------------------------",
     f" Note Brute : {Admin.notebrut} " ,
     f" Note Nette : {Admin.notenet} ",
-    f"",
+    "",
     f" Categorie  : {Admin.categorie}",
-    f"",
-    f"✅--------------------------- Observations -----------------------------",
+    "",
+    "✅--------------------------- Observations -----------------------------",
     Admin.observations
     ]
 
@@ -501,8 +501,10 @@ def MakeFiches(infdic, filesmartphone, filedouchette):
 
     #------------------------  avec qrcode format douchette
     # le contenu correspond exactement aux champs coté database Salesforce . Donc formatage hyper complexe
-    if Admin.categorie == "Premium" : tmpcat = f"Ordinateur - PREMIUM"
-    else:                           tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
+    if Admin.categorie == "Premium":
+        tmpcat = "Ordinateur - PREMIUM"
+    else:
+        tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
 
     patterns={ "Dell" : "Dell",  "Hewlett" : "HP"  , "ASUSTeK" : "Asus" , "Packard" : "Packard Bell" , "Essentiel" : "Essentiel B" , "Terra" : "Terra Mobile" , "Apple" : "Apple Mac"  }
     tmpmarque=infdic["Marque"]
@@ -536,7 +538,7 @@ def MakeBolc(infdic, filename):
     items=    [
     Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
     Admin.ECID,                # identifiant EmmausEC
-    infdic["Type"],              # type de matériel ( Portable , UC )
+    infdic["Type"],              # type de matériel (Portable, Fixe, Tablette)
     Admin.categorie,            # categorie  A B C D Premium INVENDABLE    
     Admin.bolcstatut,           # Prêt à vendre, En reconditionnement ...
     "",                         # commentaire statut . 
