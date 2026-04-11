@@ -23,6 +23,7 @@ import json
 import zipfile
 import sys
 import logging
+import re
 
 from trace import Tracer
 DATESTAMP = time.strftime("%Y%m%d.%H%M%S", datetime.datetime.now().timetuple())
@@ -37,7 +38,8 @@ from outils import TransfertTectech, TransfertEmmaus, GetRemoteVersionInfo, Down
 from cpumark import FindCpuMark
 from categorie import ComputeCategorie, ComputeNote, ComputeNoteModif
 from  rtf import MakeRTF
-from ihm  import *
+# from ihm  import *
+from ihm import Zdialog, Zhbox, Zvbox, Zlistbox, Zentry, Zbutton, Ztext, Zradio, Zgrid, Zhcell, Zinputbox
 from ux.linux import AuditMe, get_user_dirs, chown_to_user, Copy2Desktop, CopyFile2File
 
 from __about__ import __version__
@@ -211,7 +213,7 @@ def ManualAdminInfosIHM(infdic, title, margin=2, spacing=2):
 
     # Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,"")
 
-    items =list(tectech_data.external_to_external_snames.keys())
+    items =list(tectech_data.external_to_internal_snames.keys())
     Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", items ,"")
 
     boxadmin=Zvbox(vbox,5,2,"Informations administratives:")
@@ -920,7 +922,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     Admin.nomcomm=result["nomcomm"]
     Admin.benevole=result["benevole"]
     Admin.observations=result["observations"]
-    Admin.bolcstatut = tectech_data.external_to_external_snames[result["bolcstatut"]]
+    Admin.bolcstatut = tectech_data.external_to_internal_snames[result["bolcstatut"]]
     Admin.idrecond=result["idrecond"]
     Admin.origine=result["origine"]
     Admin.iddonlot=result["iddonlot"]

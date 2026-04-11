@@ -23,7 +23,7 @@ PRODAPIURL = "https://tec-tech-prod.osc-fr1.scalingo.io/api"
 USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 
 class IdesnParser:
-    __esnspat = "|".join(['BX', 'CR', 'GR', 'LI', 'LV', 'LY', 'MA', 'MB', 'RO', 'SD', 'ST', 'VI'])
+    __esnspat = "|".join(sorted(list(tectech_data.esn_to_idstock.keys())))
     __crexp = re.compile(fr'^(?P<esn>({__esnspat}))(?P<typ>(PC|TA))' + r'(?P<ann>(\d{2}))-(?P<num>(\d{4}))$',
                          re.ASCII)
 
@@ -428,7 +428,7 @@ class TecTAPI:
         tocheck = set(mat.keys()) & set(tectech_data.allowed_values.keys())
         ret = ""
         for k in tocheck:
-            if mat[k] not in tectech_data.allowed_values[k]:
+            if mat[k] and mat[k] not in tectech_data.allowed_values[k]:
                 ret += f'La valeur "{mat[k]}" n\'est pas autorisée comme "{k}"\n'
         return ret.strip()
 
@@ -576,7 +576,7 @@ class TecTAPI:
                 pass
             mat['webcam'] = "OUI" if mat['webcam'] else "NON"
             mat['lecteurDVD'] = "OUI" if mat['lecteurDVD'] else "NON"
-            d = {tectech_data.internal_to_external_fnames[_]: mat[_] for _ in
+            d = {tectech_data.internal_to_external_fnames[_]: mat.get(_, '') for _ in
                  ['typeMateriel',
                   'idMaterielReconditionneur',
                   'statut',
