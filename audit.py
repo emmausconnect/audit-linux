@@ -141,12 +141,12 @@ def ManualTechInfos(infdic, cpumark):
         boxcpu=Zvbox(vbox,5,5,"CPU")
         Ztext(boxcpu,f'Type de CPU: {infdic["Processeur"]}')
 
-        Zentry(dialog, boxcpu, "CPUMARK", "Cpumark: ","r",cpumark)
+        Zentry(dialog, boxcpu, "CPUMARK", "cpumark: ", "r", cpumark)
 
         # ajustement note
-        boxdelta = Zhbox( vbox,5 ,5,"Ajustement Note" )
-        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] , "0") 
-        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , "0")
+        boxdelta = Zhbox( vbox,5 ,5,"Ajustement de la note" )
+        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note technique", [ "-2","-1","0","1"] , "0")
+        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note esthétique", [ "-1","0","1"] , "0")
 
         # autres infos
         pctypes=["Portable", "Fixe", "Tablette"]
@@ -217,16 +217,18 @@ def ManualAdminInfosIHM(infdic, title, margin=2, spacing=2):
     Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", items ,"")
 
     boxadmin=Zvbox(vbox,5,2,"Informations administratives:")
-    Ztext(boxadmin,"La manière dont ces infos sont gérées dépend du site ...\nSur certains sites, elles sont facultatives ou préchargées manuellement dans le Bolc avant reconditionnement")
+    Ztext(boxadmin,"Pour un PC reconditionné par un pro, préciser son ID."
+          " Si le PC a été reconditionné en ESN, laisser ce champ vide.\n"
+          "Le champ 'origine' est ajouté au 'commentaire' dans tec.tech")
     hbox = Zhbox( boxadmin,2 ,0)
-    Zentry(dialog, hbox, "idrecond" , "(PC venant d'un Reconditionneur PRO)\nID du PC chez le reconditionneur:","r")        
-    Zentry(dialog, hbox, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")
+    Zentry(dialog, hbox, "idrecond" , "ID du PC chez le reconditionneur:","r")
+    Zentry(dialog, hbox, "origine", "Origine du PC:","r")
 
     dest = "tec.tech"
     nrequis = "lot"
     boxbolc=Zvbox(vbox,2,2,f"Transfert {dest}")
-    Ztext(boxbolc, f"Si le PC n'a pas déjà été créé dans {dest}, il faut fournir le N° du {nrequis}"
-                   " auquel il est associé. Sinon l'import échouera")
+    Ztext(boxbolc, f"Si le PC n'a pas déjà été créé dans {dest}, fournir le n° du {nrequis}"
+                   " auquel il est associé, sinon l'import échouera")
     Zentry(dialog,boxbolc , "iddonlot", f"N° du {nrequis}:","r")
 
     boxactions= Zhbox(vbox,0,0)
@@ -913,8 +915,8 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     if mini : return
 
     # Sasie des manuelle des informations
-    time.sleep(3)  # Evite que l'affichage rapide arrive après la boite de dialogue
-    result=ManualAdminInfosIHM(infos, "Saisie Informations Administratives")
+    time.sleep(1)  # Evite que l'affichage rapide arrive après la boite de dialogue
+    result=ManualAdminInfosIHM(infos, "Saisie des informations administratives")
     # si on n'a pas cliqué OK, les informations saisies sont invalides, et peuvent provoquer bugs
     if result.get("OK","") == "" : return 
 

@@ -371,12 +371,12 @@ class TecTAPI:
                 status = response.status
                 # code = response.code
         except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
-            errmsg = f'La recherche de {idesn} a échoué ({exc})'
+            errmsg = f"La recherche de {idesn} a échoué ({exc})"
             # _logger.error(errmsg)
             raise TecTapiEquipmentNotFound(errmsg) from exc
 
         if status != 200:
-            errmsg = f'La recherche de {idesn} a échoué (status: {status})'
+            errmsg = f"La recherche de {idesn} a échoué (status: {status})"
             # _logger.error(errmsg)
             raise TecTapiEquipmentNotFound(errmsg)
 
@@ -394,7 +394,7 @@ class TecTAPI:
             return d['data'][0]
 
         # nb is certainly 0!
-        _logger.warning(f'La recherche de {idesn} par idEsn a échoué')
+        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idEsn a échoué")
 
         # try to look the equipment up based on idMaterielReconditionneur
         try:
@@ -406,7 +406,7 @@ class TecTAPI:
             _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur==idEsn")
             return d
 
-        _logger.warning(f'La recherche de {idesn} par idMaterielReconditionneur a échoué')
+        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idMaterielReconditionneur a échoué")
 
         if not numeroserie:
             return {}
@@ -417,7 +417,10 @@ class TecTAPI:
         except (TecTapiEquipmentNotFound, Exception) as exc:
             raise TecTapiEquipmentNotFound from exc
         else:
-            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
+            if d:
+                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
+            else:
+                _logger.warning(f"La recherche de {idesn}/{numeroserie} par numeroSerie a échoué")
             return d
 
 
