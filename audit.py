@@ -26,7 +26,9 @@ import logging
 import re
 
 from trace import Tracer
-DATESTAMP = time.strftime("%Y%m%d.%H%M%S", datetime.datetime.now().timetuple())
+_DSFMT = "%Y%m%d.%H%M%S"
+DATESTAMP = time.strftime(_DSFMT, datetime.datetime.now().timetuple())
+
 _tracer = Tracer("audit-linux", DATESTAMP)
 _logger = _tracer.get_logger()
 _logger.setLevel(logging.DEBUG)
@@ -931,7 +933,11 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
 
 
     _logger.info("----------------- Création et envoi des fichiers vers audits.emmaus-connect.org et tec.tech ----------------------")
-    Admin.auditdate= datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    if datestamp:
+        # we are making a (reasonable) assumption about how 'datestamp' is formated
+        Admin.auditdate = time.strftime("%d/%m/%Y %H:%M:%S", datetime.datetime.strptime(datestamp, _DSFMT).timetuple())
+    else:
+        datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     MakeSendFiles(infos, useprodapi, xfer)
 
