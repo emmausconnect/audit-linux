@@ -10,6 +10,19 @@ tar xzf linux-x.y.z.tgz
 ### Et toujours: n'oubliez pas de lire le fichier README.pdf 😃
 
 
+## 4.3.1
+
+- le bug relatif au calcul de la note en cas de SSD est corrigé (signalé par Charles M.)
+
+- j'ai introduit un nouveau style de commande, plus standard, pour lancer l'audit; l'ancien style reste utilisable mais pourrait être supprimé dans une prochaine version; compte tenu de l'urgence pour le bug mentionné ci-dessus, la mise à jour du README est reportée à plus tard
+
+- il est désormais possible de lancer un "mini-audit": il se limitera à l'affichage des informations d'audit à l'écran (sans contact avec les serveurs d'audit et tec.tech)
+
+- l'affichage des informations dans la boîte de saisie manuelle des informations techniques est plus précis
+
+- la gestion des "marques" a été améliorée pour les cas où la marque détectée ne correspond pas exactemet a une de celles listées dans tec.tech
+
+
 ## 4.3.0
 
 Cette version est importante quoique quasiment *cosmétique*. Vu des utilisateurs, l'intention est de marquer une pause dans les modifications fonctionnelles en attendant un plus large retour d'expérience.

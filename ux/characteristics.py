@@ -35,16 +35,20 @@ def _search_for_dict(j, key: str = "id", value: str = " core"):
 
 def _search_for_root(d: dict) -> dict | None:
     retd = dict()
+    _logger.debug(f"_search_for_root({d=})")
     if not d['mountpoint']:
         if d.get('children'):
             for _ in d.get('children'):
                 retd = _search_for_root(_)
                 if retd:
+                    _logger.debug(f"_search_for_root ==> {retd}")
                     return retd
         else:
+            _logger.debug(f"_search_for_root ==> {retd}")
             return retd
     else:
         if d['mountpoint'] == '/':
+            _logger.debug(f"_search_for_root ==> {d}")
             return d
 
 
