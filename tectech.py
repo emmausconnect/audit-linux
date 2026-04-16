@@ -23,7 +23,7 @@ PRODAPIURL = "https://tec-tech-prod.osc-fr1.scalingo.io/api"
 USERAGENT = "curl/8.11.1"  # "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 
 class IdesnParser:
-    __esnspat = "|".join(['BX', 'CR', 'GR', 'LI', 'LV', 'LY', 'MA', 'MB', 'RO', 'SD', 'ST', 'VI'])
+    __esnspat = "|".join(sorted(list(tectech_data.esn_to_idstock.keys())))
     __crexp = re.compile(fr'^(?P<esn>({__esnspat}))(?P<typ>(PC|TA))' + r'(?P<ann>(\d{2}))-(?P<num>(\d{4}))$',
                          re.ASCII)
 
@@ -75,7 +75,7 @@ class Token:
         if Token.__is_initialized:
             return
 
-        uniquetmpfile = f"token-prod.json" if "prod" in prefix else f"token-test.json"
+        uniquetmpfile = "token-prod.json" if "prod" in prefix else "token-test.json"
 
         if not tokenfile:
             # # this is a trick: when no token file is specified, we force a non-existing file so that the Token
@@ -371,12 +371,12 @@ class TecTAPI:
                 status = response.status
                 # code = response.code
         except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
-            errmsg = f'La recherche de {idesn} a échoué ({exc})'
+            errmsg = f"La recherche de {idesn} a échoué ({exc})"
             # _logger.error(errmsg)
             raise TecTapiEquipmentNotFound(errmsg) from exc
 
         if status != 200:
-            errmsg = f'La recherche de {idesn} a échoué (status: {status})'
+            errmsg = f"La recherche de {idesn} a échoué (status: {status})"
             # _logger.error(errmsg)
             raise TecTapiEquipmentNotFound(errmsg)
 
@@ -394,7 +394,7 @@ class TecTAPI:
             return d['data'][0]
 
         # nb is certainly 0!
-        _logger.warning(f'La recherche de {idesn} par idEsn a échoué')
+        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idEsn a échoué")
 
         # try to look the equipment up based on idMaterielReconditionneur
         try:
@@ -406,7 +406,7 @@ class TecTAPI:
             _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur==idEsn")
             return d
 
-        _logger.warning(f'La recherche de {idesn} par idMaterielReconditionneur a échoué')
+        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idMaterielReconditionneur a échoué")
 
         if not numeroserie:
             return {}
@@ -417,7 +417,10 @@ class TecTAPI:
         except (TecTapiEquipmentNotFound, Exception) as exc:
             raise TecTapiEquipmentNotFound from exc
         else:
-            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
+            if d:
+                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
+            else:
+                _logger.warning(f"La recherche de {idesn}/{numeroserie} par numeroSerie a échoué")
             return d
 
 
@@ -428,7 +431,7 @@ class TecTAPI:
         tocheck = set(mat.keys()) & set(tectech_data.allowed_values.keys())
         ret = ""
         for k in tocheck:
-            if mat[k] not in tectech_data.allowed_values[k]:
+            if mat[k] and mat[k] not in tectech_data.allowed_values[k]:
                 ret += f'La valeur "{mat[k]}" n\'est pas autorisée comme "{k}"\n'
         return ret.strip()
 
@@ -480,7 +483,8 @@ class TecTAPI:
                 body = response.read()
                 status = response.status
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            # errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg) from exc
         except Exception as exc:
@@ -549,7 +553,7 @@ class TecTAPI:
                 body = response.read()
                 status = response.status
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-            errmsg = f'Erreur serveur lors de la création de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
+            errmsg = f'Erreur serveur lors de la création de {idesn} ({exc.code}: {exc.reason})'
             # _logger.error(errmsg)
             raise TecTapiCreationFailed(errmsg) from exc
         except Exception as exc:
@@ -575,7 +579,7 @@ class TecTAPI:
                 pass
             mat['webcam'] = "OUI" if mat['webcam'] else "NON"
             mat['lecteurDVD'] = "OUI" if mat['lecteurDVD'] else "NON"
-            d = {tectech_data.internal_to_external_fnames[_]: mat[_] for _ in
+            d = {tectech_data.internal_to_external_fnames[_]: mat.get(_, '') for _ in
                  ['typeMateriel',
                   'idMaterielReconditionneur',
                   'statut',
@@ -708,7 +712,7 @@ if __name__ == "__main__":
     pcpr_ = "GRPC26-9999"
     grpc26_9999_ = api_.lookup_equipment(pcpr_)
     if grpc26_9999_:
-        _logger.info(f"GRPC26-9999 existe déjà; on va faire une mise à jour")
+        _logger.info("GRPC26-9999 existe déjà; on va faire une mise à jour")
         mygrpc26_9999_ = api_.update_equipment(grpc26_9999_)
     else:  # il s'agit d'une création
         d_ = {'idLot': 'L-0048', 'idMaterielReconditionneur': 'EM_2602_9999', 'idEsn': pcpr_,

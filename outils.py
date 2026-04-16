@@ -184,7 +184,8 @@ def TransfertEmmaus(zf, ecid):
     desturl = "https://audits.emmaus-connect.org/api/upload/zip"
     cmd = ["curl", "-s", "-X", "POST", f"{desturl}", "-F", f"ecid={ecid}",
            "-F", f"actual_file=@{zf}", "-H", f"X-API-Key: {xak}"]
-    result = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"})
+    result = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"},
+                            check=False)  # we don't really care if this particular transfer fails
     _logger.debug(f"result.stderr = {result.stderr}")
     _logger.debug(f"result.stdout = {result.stdout}")
 

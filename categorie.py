@@ -7,7 +7,7 @@
 # categorie=    ComputeCategorie( csvregles , finalnote)
 #
 #####################################################################################
-from common import *
+from common import ReadCSV
 
 #--------------------------------------------------
 # Calcule la categorie 
@@ -51,7 +51,6 @@ def ComputeCategorie( csvregles , note):
 #---------------------------------------------------
 def ComputeNote(infdic, csvregles, section, txtnotes):
 
-
     rules=ReadCSV( csvregles,section)
     finalnote=0
 
@@ -72,13 +71,8 @@ def ComputeNote(infdic, csvregles, section, txtnotes):
             for note,limit in rule.items():
                 if limit == "": limit="999999999"   # Cas de la note maximale. Pour elle, on met une valeur limite infinie
                 if not limit.isnumeric(): continue  # Eliminer ce qui n'est pas une valeur numerique
-
-                # marge:  
-                # marge= 0.94  # 6% de marge  ... permet à un disque de 250GO d'être traité comme un disque 256GO
-                marge=1.0    # abandon de la marge : pour éviter des écarts avec les moulinettes Excel qui peuvent exister dans les sites
-                vlimit=float(limit)* marge  
-                if keyvalue < vlimit:
-                    txt=f"{key}={keyvalue} Note={note}" 
+                if keyvalue < float(limit):
+                    txt=f"{key}={keyvalue} Note={note}"
                     txtnotes.append(txt)
                     finalnote=finalnote+ float(note)
                     break
@@ -111,8 +105,7 @@ def ComputeNoteModif(infdic, csvregles, section, txtnotes, initialnote):
 
     note=initialnote
 
-
-    txtnotes.append("")
+    # txtnotes.append("")
     txtnotes.append(f"Note brute avant ajustements={initialnote} ")
     txtnotes.append(f"Delta NoteTechnique={infdic['NoteTechnique']}")
     txtnotes.append(f"Delta NoteEsthetique={infdic['NoteEsthetique']}")

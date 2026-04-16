@@ -58,24 +58,23 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
     # with a mandatory "id", and values compliant with specific types for other fields
     # Here, we will leave "id" aside and provide as many other fields as we can
     bolc_to_tectech_types = {
-        "UC": "ORDINATEUR_FIXE",
+        "Fixe": "ORDINATEUR_FIXE",
         "Portable": "ORDINATEUR_PORTABLE",
         "Tablette": "TABLETTE"
     }
-    esn_to_idstock = {
-        "LV": "S-0052",
-        "VI": "S-0053",
-        "MB": "S-0054",
-        "ST": "S-0055",
-        "SD": "S-0089",
-        "CR": "S-0090",
-        "RO": "S-0091",
-        "LI": "S-0092",
-        "LY": "S-0093",
-        "GR": "S-0094",
-        "MA": "S-0095",
-        "BX": "S-0096",
-    }
+    esn_to_idstock = tectech_data.esn_to_idstock
+
+    def guess_brand(x: str) -> str:
+        val = x.split(' ')[0]
+        if val == "Hewlett-Packard":
+            val = "HP"
+        if val.upper().startswith("ASUS"):  # ASUS, ASUSTek, etc.
+            val = "ASUS"
+        val = val.upper()
+        if val in tectech_data.allowed_values['marque']:
+            return val
+        else:
+            return ""
 
     def __nullableint(s):
         try:
@@ -96,7 +95,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         d['idMaterielReconditionneur'] = idmaterielreconditionneur
         # 2: Admin.ECID,                 # identifiant EmmausEC
         d['idEsn'] = vals[2]
-        # 3: infos["Type"],              # type de matériel ( Portable , UC )
+        # 3: infos["Type"],              # type de matériel (Portable, Fixe, Tablette)
         d['typeMateriel'] = bolc_to_tectech_types[vals[3]]
         # 4: Admin.categorie,            # categorie  A B C D Premium INVENDABLE
         d['categorie'] = vals[4].upper()
@@ -106,18 +105,11 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
             d['categorie'] = "D"
             d['statut'] = "NON_REEMPLOYABLE"
         # 7: infos["Marque"],            # Marque: HP , Lenovo ...
-        # on force la marque ZTE en cas de doute, car TECT n'autorise qu'une liste fermée de valeurs
-        # en pratique, cela n'arrive que dans des conditions de test limitées (par exemple, avec une VM)
         v = vals[7]
-        if v == "Hewlett-Packard":
-            v = "HP"
-        if v.upper().startswith("ASUS"):
-            v = "ASUS"
-        if v.upper() in tectech_data.allowed_values['marque']:
-            d['marque'] = v.upper()
-        else:
-            _logger.warning(f"La marque inconnue {v} est convertie en ZTE")
-            d['marque'] = "ZTE"
+        d['marque'] = guess_brand(v)
+        _logger.debug(f"La marque '{v}' est reconnue comme >{d['marque']}<")
+        if not d['marque']:
+            _logger.warning(f"La marque '{v}' est inconnue. Vous devrez ajuster la marque directement sur le site")
         # 10: infos["Modele"],            # Modele ...
         d['model'] = vals[10]
         # 14: infos["NumeroSerie"],       # Numero de serie
@@ -167,8 +159,10 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
             d['idStock'] = idstock
         else:
             d['idStock'] = esn_to_idstock.get(vals[2][0:2])
+            _logger.info(f"La valeur >{d['idStock']}< de idStock (stock de rattachement) "
+                         f"a été déduite de >{vals[2][0:2]}<")
             if not d['idStock']:
-                raise
+                raise ValueError(f"{vals[2][0:2]} n'a pas de stock de rattachement connu")
 
         # 'commentaire' will hold some of the BOLC fields that fit nowhere in tec.tech structure
         d['commentaire'] = f"cpumark: {vals[26]} / Batterie: {vals[11]} / Écran: {vals[23]}"
@@ -209,6 +203,12 @@ if __name__ == "__main__":
 
     # testing the bug signalled by Éric
     vals_ = ['', '', 'MAPC26-2026', 'Portable', 'A', 'En reconditionnement', '', 'Dell', '', '', 'Latitude 5300', '65.5%', '', '', 'DJY3HW2', 'Intel Core i5-8265U', 'SSD', '256', '', '', '9', '', 'oui', '13.3', '0', '0', '5811', '', '', '28/02/2026 14:56:42', 'Linux: LMDE 7 Gigi', '', '', '', 'ESN']
+    idlot_ = "L-0670"
+    idStock_ = "S-0095"
+    idmaterielreconditionneur_ = "MAPC26-2026"
+
+    # testing the bug signalled by Antoine ("Dell Inc.")
+    vals_ = ['', '', 'MAPC26-2026', 'Portable', 'A', 'En reconditionnement', '', 'Dell Inc.', '', '', 'Latitude 5300', '65.5%', '', '', 'DJY3HW2', 'Intel Core i5-8265U', 'SSD', '256', '', '', '9', '', 'oui', '13.3', '0', '0', '5811', '', '', '28/02/2026 14:56:42', 'Linux: LMDE 7 Gigi', '', '', '', 'ESN']
     idlot_ = "L-0670"
     idStock_ = "S-0095"
     idmaterielreconditionneur_ = "MAPC26-2026"

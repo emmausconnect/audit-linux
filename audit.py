@@ -22,22 +22,26 @@ import signal
 import json
 import zipfile
 import sys
-import logging
+import re
+import argparse
 
 from trace import Tracer
-DATESTAMP = time.strftime("%Y%m%d.%H%M%S", datetime.datetime.now().timetuple())
-_tracer = Tracer("audit-linux", DATESTAMP)
+_DSFMT = "%Y%m%d.%H%M%S"
+DATESTAMP = time.strftime(_DSFMT, datetime.datetime.now().timetuple())
+
+_tracer = Tracer(name="audit-linux", ts=DATESTAMP, debugmode=False)
 _logger = _tracer.get_logger()
-_logger.setLevel(logging.DEBUG)
 _logger.info(f"Nom du fichier de trace: {_tracer.get_tracefilename()}")
 
+import __about__
 import tectech_data
 from outils import Browser, MakeZip, Editor, ChdirScript
 from outils import TransfertTectech, TransfertEmmaus, GetRemoteVersionInfo, DownloadFile
 from cpumark import FindCpuMark
 from categorie import ComputeCategorie, ComputeNote, ComputeNoteModif
 from  rtf import MakeRTF
-from ihm  import *
+# from ihm  import *
+from ihm import Zdialog, Zhbox, Zvbox, Zlistbox, Zentry, Zbutton, Ztext, Zradio, Zgrid, Zhcell, Zinputbox
 from ux.linux import AuditMe, get_user_dirs, chown_to_user, Copy2Desktop, CopyFile2File
 
 from __about__ import __version__
@@ -103,14 +107,13 @@ def DataSave(somedir, file, data):
 #  mise à jour de infos 
 #-----------------------------------------------------------------
 def ManualTechInfos(infdic, cpumark):
+    _logger.debug(f"Avant saisie manuelle: {infdic=}")
 
     disktype=infdic["DisqueType"]
     #disktype=""
     #cpumark=""
 
     while True:
-
-
 
         dialog=Zdialog("Informations Techniques",10,10)
         area=dialog.area
@@ -120,38 +123,37 @@ def ManualTechInfos(infdic, cpumark):
 
         # Obtention du disque, et stockage de la taille dans les valeurs SSD ou HDD
         boxdisk=Zvbox(vbox,2,2,"Disque")
-
-
-
-        if disktype == "":
+        if False and disktype == "":
             Ztext(boxdisk,"Type de disque non détecté !")
             msgdisk= f"Pour savoir si le disque est un HDD ou un SSD, vous pouvez chercher sa référence sur Internet: {infdic['DisqueRef']}"
             Ztext(boxdisk,msgdisk)
             Zlistbox(dialog, boxdisk, "DISK", "Type de disque", [ "HDD", "SSD" ] , "HDD" )
         else:
-            if disktype == "SSD":
-                disktype += "(nvme)" if infdic.get("NVME") else "(ata)"
-            msgdisk= f"Type de disque detecté: {disktype}"
+            _ = disktype + ("/nvme" if infdic.get("NVME") else "/ata") if disktype == "SSD" else ""
+            msgdisk = f"Disque principal: {_} - {infdic.get('DisqueTaille')} Go"
+            msgdisk += f"\nAutres disques: {infdic.get('AutresDisques')}"
             Ztext(boxdisk,msgdisk)
 
+        boxram=Zvbox(vbox,2,2,"RAM")
+        Ztext(boxram, f"{infdic.get('RAM')} Gio")
 
         # saisie du cpumark, si pas trouvé
         boxcpu=Zvbox(vbox,5,5,"CPU")
         Ztext(boxcpu,f'Type de CPU: {infdic["Processeur"]}')
 
-        Zentry(dialog, boxcpu, "CPUMARK", "Cpumark: ","r",cpumark)
+        Zentry(dialog, boxcpu, "CPUMARK", "cpumark: ", "r", cpumark)
 
         # ajustement note
-        boxdelta = Zhbox( vbox,5 ,5,"Ajustement Note" )
-        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note Technique", [ "-2","-1","0","1"] , "0") 
-        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note Esthétique", [ "-1","0","1"] , "0")
+        boxdelta = Zhbox( vbox,5 ,5,"Ajustement de la note" )
+        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note technique", [ "-2","-1","0","1"] , "0")
+        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note esthétique", [ "-1","0","1"] , "0")
 
         # autres infos
-        pctypes=[ "Portable" , "Tablette", "UC" ]
+        pctypes=["Portable", "Fixe", "Tablette"]
         # index=0
         # for i,value in enumerate(pctypes):
         #     if value==infosdict["Type"] : index=i
-        Zlistbox(dialog,  vboxother,  "Type", "Type de PC", pctypes , "Portable")
+        Zlistbox(dialog,  vboxother,  "Type", "Type de PC", pctypes , infdic.get('Type', "Portable"))
         Zentry(dialog, vboxother, "Ecran", "Taille Ecran (pouces): ","r", infdic["Ecran"])
         
         # boutons
@@ -173,9 +175,9 @@ def ManualTechInfos(infdic, cpumark):
            
         if ok : break
 
-    if "DISK" in out: 
-        disktype=out["DISK"]
-        infdic["DisqueType"]=disktype
+    # if "DISK" in out:
+    #     disktype=out["DISK"]
+    #     infdic["DisqueType"]=disktype
     #!!!! il est important que les clés SSD ou HDD contiennent la taille disque, car c'est ce qui est utilisé dans le calcul des regles
     infdic[disktype]=infdic["DisqueTaille"]
 
@@ -187,9 +189,7 @@ def ManualTechInfos(infdic, cpumark):
     infdic["Type"]= out["Type"]
     infdic["Ecran"]= out["Ecran"]
 
-
-
-
+    _logger.debug(f"Après saisie manuelle: {infdic=}")
 
 
 #===========================================================================
@@ -211,20 +211,22 @@ def ManualAdminInfosIHM(infdic, title, margin=2, spacing=2):
 
     # Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", [ "", "En reconditionnement" , "Prêt à vendre" , "En attente" ,  "HS" ,"A entrer dans Salesforce" ] ,"")
 
-    items =list(tectech_data.external_to_external_snames.keys())
+    items =list(tectech_data.external_to_internal_snames.keys())
     Zlistbox(dialog, vbox, "bolcstatut", "Statut Reconditionnement", items ,"")
 
     boxadmin=Zvbox(vbox,5,2,"Informations administratives:")
-    Ztext(boxadmin,"La manière dont ces infos sont gérées dépend du site ...\nSur certains sites, elles sont facultatives ou préchargées manuellement dans le Bolc avant reconditionnement")
+    Ztext(boxadmin,"Pour un PC reconditionné par un pro, préciser son ID."
+          " Si le PC a été reconditionné en ESN, laisser ce champ vide.\n"
+          "Le champ 'origine' est ajouté au 'commentaire' dans tec.tech")
     hbox = Zhbox( boxadmin,2 ,0)
-    Zentry(dialog, hbox, "idrecond" , "(PC venant d'un Reconditionneur PRO)\nID du PC chez le reconditionneur:","r")        
-    Zentry(dialog, hbox, "origine", "Origine du PC ( ASF, Trira, Ecodair...):","r")
+    Zentry(dialog, hbox, "idrecond" , "ID du PC chez le reconditionneur:","r")
+    Zentry(dialog, hbox, "origine", "Origine du PC:","r")
 
     dest = "tec.tech"
     nrequis = "lot"
     boxbolc=Zvbox(vbox,2,2,f"Transfert {dest}")
-    Ztext(boxbolc, f"Si le PC n'a pas déjà été créé dans {dest}, il faut fournir le N° du {nrequis}"
-                   " auquel il est associé. Sinon l'import échouera")
+    Ztext(boxbolc, f"Si le PC n'a pas déjà été créé dans {dest}, fournir le n° du {nrequis}"
+                   " auquel il est associé, sinon l'import échouera")
     Zentry(dialog,boxbolc , "iddonlot", f"N° du {nrequis}:","r")
 
     boxactions= Zhbox(vbox,0,0)
@@ -356,9 +358,9 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
             z.write(dest, os.path.basename(dest))
 
     if exitcode in ["EMMAUS", "BOTH"]:
-        _logger.info(f"=== Envoi des fichiers vers audits.emmaus-connect.org ===")
+        _logger.info("=== Envoi des fichiers vers audits.emmaus-connect.org ===")
         TransfertEmmaus(ZIPFILE, Admin.ECID)
-        _logger.info(f"=== ...terminé ===")
+        _logger.info("=== ...terminé ===")
 
 
     
@@ -386,13 +388,13 @@ def MakeRapport(infdic, filename, header, details):
     f" IDENTIFIANT     : {Admin.ECID}  ",
     f" DATE            : {Admin.auditdate}    ",
     f" REALISE PAR     : {Admin.benevole}  ",
-    f"=================================================================================",
-    f"",
+    "=================================================================================",
+    "",
     ]
 
     txt1=CRLF.join(items) + CRLF
 
-    txt2=    f"✅--------------------------- Informations (Gio pour la mémoire, Go pour les disques) ------------------" +CRLF + CRLF
+    txt2=    "✅--------------------------- Informations (Gio pour la mémoire, Go pour les disques) ------------------" +CRLF + CRLF
     for key,value in infdic.items():
         # astuce pour remplacer la valeur numerique des cles SSD et HDD
         # if key in [ "SSD","HDD" ] : value="oui"
@@ -407,14 +409,14 @@ def MakeRapport(infdic, filename, header, details):
 
 
     items=[
-    f"",
-    f"✅--------------------------- Notes -----------------------------",
+    "",
+    "✅--------------------------- Notes -----------------------------",
     f" Note Brute : {Admin.notebrut} " ,
     f" Note Nette : {Admin.notenet} ",
-    f"",
+    "",
     f" Categorie  : {Admin.categorie}",
-    f"",
-    f"✅--------------------------- Observations -----------------------------",
+    "",
+    "✅--------------------------- Observations -----------------------------",
     Admin.observations
     ]
 
@@ -501,8 +503,10 @@ def MakeFiches(infdic, filesmartphone, filedouchette):
 
     #------------------------  avec qrcode format douchette
     # le contenu correspond exactement aux champs coté database Salesforce . Donc formatage hyper complexe
-    if Admin.categorie == "Premium" : tmpcat = f"Ordinateur - PREMIUM"
-    else:                           tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
+    if Admin.categorie == "Premium":
+        tmpcat = "Ordinateur - PREMIUM"
+    else:
+        tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
 
     patterns={ "Dell" : "Dell",  "Hewlett" : "HP"  , "ASUSTeK" : "Asus" , "Packard" : "Packard Bell" , "Essentiel" : "Essentiel B" , "Terra" : "Terra Mobile" , "Apple" : "Apple Mac"  }
     tmpmarque=infdic["Marque"]
@@ -536,7 +540,7 @@ def MakeBolc(infdic, filename):
     items=    [
     Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
     Admin.ECID,                # identifiant EmmausEC
-    infdic["Type"],              # type de matériel ( Portable , UC )
+    infdic["Type"],              # type de matériel (Portable, Fixe, Tablette)
     Admin.categorie,            # categorie  A B C D Premium INVENDABLE    
     Admin.bolcstatut,           # Prêt à vendre, En reconditionnement ...
     "",                         # commentaire statut . 
@@ -760,11 +764,6 @@ class Ecid:
                 value=f.read()
         else:
             value=self.Input("")
-
-        # Pour les tests unitaires...
-        # TestsUnitaires(value)
-        # TestsUnitaires("ZZTEST")
-
         return value
 
     def Init(self,value):
@@ -773,8 +772,8 @@ class Ecid:
     def Reset(self):
         if os.path.isfile(self.idfile) :  os.remove(self.idfile)        
 
-    def Input(self,value):
-        while not re.match( self.regexp , value):
+    def Input(self, value: str):
+        while not re.match( self.regexp , value.upper()):
             if value != "":
                 msg=f"IDENTIFIANT emmaus incorrect: {value}"
             else:
@@ -782,9 +781,9 @@ class Ecid:
             value=Zinputbox( "SAISIE IDENTIFIANT" , msg, "Entrer l'identifiant (exemple: GRPC25-9999) "  , value )
             if value == "" : break
 
-        if value == "" : sys.exit()  
-        self.Save(value)
-        return value
+        # if value == "" : sys.exit()
+        self.Save(value.upper())
+        return value.upper()
 
 
 #------------------------------------------------------------------
@@ -841,12 +840,14 @@ def UpdateMe():
 #
 #==============================================================================
 def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: str=""):
-
-    # global infos # TRES important !
+    _logger.debug(f"ProcessAudit({mini=}, {useprodapi=}, {xfer=}, {datestamp=})")
+    _logger.debug(f"ProcessAudit: Ecid=>{Ecid().Get()}<")
+    # exitiftest()
 
     Admin.ECID = Ecid().Get()
 
     # Audit du système et extraction des données
+    _logger.info(f"Recherche des caractéristiques de l'équipement")
     infos=AuditMe(datestamp=datestamp)
 
     # Si le materiel est declaré comme tablette, on force le type
@@ -903,14 +904,14 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     #------------------- affichage rapide ------------------------
     filename=os.path.join( TMPDISK , "infos.txt")
     MakeRapport(infos, filename, header=False, details=True )
-    Editor( filename )
+    Editor( filename )  # this editor window is a pain in the neck
 
     # si Mini Audit , pas d'envoi ....
     if mini : return
 
     # Sasie des manuelle des informations
-    time.sleep(3)  # Evite que l'affichage rapide arrive après la boite de dialogue
-    result=ManualAdminInfosIHM(infos, "Saisie Informations Administratives")
+    time.sleep(1)  # Evite que l'affichage rapide arrive après la boite de dialogue
+    result=ManualAdminInfosIHM(infos, "Saisie des informations administratives")
     # si on n'a pas cliqué OK, les informations saisies sont invalides, et peuvent provoquer bugs
     if result.get("OK","") == "" : return 
 
@@ -918,14 +919,18 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     Admin.nomcomm=result["nomcomm"]
     Admin.benevole=result["benevole"]
     Admin.observations=result["observations"]
-    Admin.bolcstatut = tectech_data.external_to_external_snames[result["bolcstatut"]]
+    Admin.bolcstatut = tectech_data.external_to_internal_snames[result["bolcstatut"]]
     Admin.idrecond=result["idrecond"]
     Admin.origine=result["origine"]
     Admin.iddonlot=result["iddonlot"]
 
 
     _logger.info("----------------- Création et envoi des fichiers vers audits.emmaus-connect.org et tec.tech ----------------------")
-    Admin.auditdate= datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    if datestamp:
+        # we are making a (reasonable) assumption about how 'datestamp' is formated
+        Admin.auditdate = time.strftime("%d/%m/%Y %H:%M:%S", datetime.datetime.strptime(datestamp, _DSFMT).timetuple())
+    else:
+        datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     MakeSendFiles(infos, useprodapi, xfer)
 
@@ -942,7 +947,7 @@ def GetPasswd():
 
 #=============================== Main ==============================
 def signal_handler(sig, frame):
-    _logger.info(f"Caught {sig} at {frame}. Exiting...")
+    _logger.info(f"Caught signal {sig} ({signal.strsignal(sig)}). Exiting...")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -954,8 +959,7 @@ ChdirScript()
 UpdateMe()
 
 
-if __name__ == '__main__':
-
+def old_parsing() -> (bool, bool, bool):
     # The existing parameter handling is not compatible with an argparse-based parsing, so we continue playing with
     # sys.argv without striving for elegance or efficiency...
 
@@ -964,39 +968,145 @@ if __name__ == '__main__':
     #   python3 -B audit.py GRPC26-0043             # [2] PROD is implied
     #   python3 -B audit.py [PROD|TEST]             # [3] id will we requested
     #   python3 -B audit.py GRPC26-0043 [PROD|TEST] # [4] works with tec.tech (case-insensitive)
-
     # _logger.level = logging.DEBUG
     _logger.info(sys.argv)
     prod_or_test_ = ["PROD", "TEST"]
     n_ = len(sys.argv) - 1
-    nopc_ = None
-    useprodapi_ = True
+    nopc = None
+    useprodapi = True
+    mini = False
     if n_ == 0:  # [1]
-        _logger.debug("Aucun paramètre ==> base PROD implicitement choisie")
-        nopc_ = True
+        _logger.debug("Aucun paramètre ==> Audit sans transferts")
+        nopc = True
+        mini = True
     elif n_ == 1:
         _logger.debug("Un seul paramètre: soit un idEsn, soit PROD|TEST")
         if sys.argv[1].upper() not in prod_or_test_:  # [2]
             Ecid().Init(sys.argv[1].upper())
-            nopc_ = False
+            nopc = False
         else:  # [3]
             _logger.debug("Uniquement choix PROD|TEST")
-            useprodapi_ = sys.argv[1].upper() == "PROD"
+            useprodapi = sys.argv[1].upper() == "PROD"
     elif n_ == 2:  # [4]
         _logger.debug("Deux paramètres ==> idEsn + PROD|TEST")
         Ecid().Init(sys.argv[1].upper())
-        nopc_ = False
-        useprodapi_ = sys.argv[2].upper() == "PROD"
+        nopc = False
+        useprodapi = sys.argv[2].upper() == "PROD"
     else:
         _logger.error("Paramètres incorrects. Abandon...")
         sys.exit(1)
 
-    _logger.info(f"{nopc_ = }")
-    _logger.info(f"{useprodapi_ = }")
+    _logger.info(f"{nopc = }")
 
+    return nopc, mini, useprodapi
+
+def print_version_info() -> None:
+    print(f"{__about__.__title__}")
+    print(f"Version: {__about__.__version__}")
+    print("Développé par:")
+    for a in __about__.__authors__:
+        print(f"  {a['versions']}: {a['name']} ({a['email']})")
+    print(f"Copyright: {__about__.__copyright__}")
+
+def check_idesn(val):
+    __esnspat = "|".join(sorted(list(tectech_data.esn_to_idstock.keys())))
+    __crexp = re.compile(fr'^(?P<esn>({__esnspat}))(?P<typ>(PC|TA))' + r'(?P<ann>(\d{2}))-(?P<num>(\d{4}))$', re.ASCII)
+    m = re.match(__crexp, val.upper())
+    if not m:
+        raise argparse.ArgumentTypeError(f"{val} n'est pas un idEsn valide")
+    return val
+
+def exitiftest():
     # sys.exit(0)
+    return
 
-    ProcessAudit(mini=False, useprodapi=useprodapi_, datestamp=DATESTAMP)
+
+if __name__ == '__main__':
+
+    if not [_ for _ in sys.argv if _.startswith('-')]:
+        _logger.debug("Old-style parameter parsing")
+        _logger.debug(f"{len(sys.argv)}, {sys.argv=}")
+        nopc_, mini_, useprodapi_ = old_parsing()
+        # exitiftest()
+        ProcessAudit(mini=mini_, useprodapi=useprodapi_, datestamp=DATESTAMP)
+
+    else:
+        _logger.debug("Modern-style parameter parsing")
+
+        class myHelpFormatter(argparse.RawDescriptionHelpFormatter):  # argparse.ArgumentDefaultsHelpFormatter):
+            pass
+
+        class MyFormatter(argparse.RawDescriptionHelpFormatter, argparse.MetavarTypeHelpFormatter):
+            pass
+
+
+        description_ = "\n====================================="
+        description_ += f"\nProgramme d'audit de PC Linux - {__about__.__version__}"
+        description_ += "\n====================================="
+
+        epilog_ =  "\n=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
+        epilog_ += "\nL'ancien style de passage de paramètres est encore admis, mais en voie d'obsolescence."
+        epilog_ += "\nPour mémoire, voici quelques exemples de commandes valides:"
+        epilog_ += "\n  sudo bash audit.sh              # mini-audit: sans transferts"
+        epilog_ += "\n  sudo bash audit.sh GRPC26-0043  # audit normal: avec envoi vers les serveurs"
+
+        epilog_ += "\n======================================================================================"
+
+        parser_ = argparse.ArgumentParser(description=description_, epilog=epilog_,
+                                          add_help=False, usage=argparse.SUPPRESS,
+                                          formatter_class=MyFormatter)
+
+        ghelp_ = parser_.add_argument_group("Obtenir de l'aide")  # , "Audit puis transferts vers base d'audtis et tec.tech")
+
+        ghelp_.add_argument("-h", "--help", default=False, action='store_true',
+                             help="Afficher le message d'aide")
+
+        gfull_ = parser_.add_argument_group("Usage standard", "Audit puis transferts vers base d'audits et tec.tech")
+
+        gfull_.add_argument("-i", "--idesn", type=check_idesn, required=False, metavar='eePCaa-nnnn',
+                             help="Identifiant ESN du PC à traiter" 
+                                  f"(ee dans {{{', '.join(sorted(list(tectech_data.esn_to_idstock.keys())))}}})")
+
+        gfull_.add_argument("-t", "--test", default=False, action='store_true',
+                             help="Utiliser la base tec.tech de test (optionnel - base prod par défaut)")
+
+        gmini_ = parser_.add_argument_group("Mini-audit")  # , "Mini-audit seul")
+
+        gmini_.add_argument("-m", "--mini", default=False, action='store_true',
+                             help="Réaliser un audit sans identifier le PC et quitter")
+
+        gvers_ = parser_.add_argument_group("Information")  # , "Information de version")
+
+        gvers_.add_argument("--version", default=False, action='store_true',
+                             help="Afficher les informations détaillées de version et quitter")
+
+        args_ = parser_.parse_args()
+        nopc_ = False  # not very sure about this one...
+        _logger.debug(f"{args_=}")
+
+        if args_.version:
+            print_version_info()
+            sys.exit(0)
+
+        if args_.help:
+            parser_.print_help()
+            sys.exit(0)
+
+        if args_.mini:
+            _logger.debug("Running mini-audit")
+            # exitiftest()
+            ProcessAudit(mini=True, useprodapi=not args_.test, datestamp=DATESTAMP, xfer=False)
+        else:
+            _logger.debug("Running normal audit")
+            Ecid().Init(args_.idesn.upper())
+            # exitiftest
+            ProcessAudit(mini=False, useprodapi=not args_.test, datestamp=DATESTAMP)
+
+    sys.exit(0)
+
+    # Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
+    # if nopc_:
+    #     Zinputbox("**FIN**" , "                           Fin de l'audit!                          ")
 
     # global infos
     # _logger.info(infosdict)
@@ -1010,6 +1120,3 @@ if __name__ == '__main__':
     # _logger.info(o_)
     # _logger.info(globals())
 
-    # Si exécution directe, attendre RETURN  ( pour ne pas perdre l'affichage )
-    if nopc_:
-        Zinputbox("**FIN**" , "                           Fin de l'audit!                          ")

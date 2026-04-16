@@ -49,7 +49,7 @@ internal_to_external_fnames = {
     'webcam': 'Webcam',
     'commentaire': 'Commentaire'
 }
-external_to_external_fnames = {internal_to_external_fnames[k]: k for k in internal_to_external_fnames}
+external_to_internal_fnames = {internal_to_external_fnames[k]: k for k in internal_to_external_fnames}
 
 internal_to_external_snames = {
     "NON_REEMPLOYABLE": "Non réemployable",
@@ -61,4 +61,20 @@ internal_to_external_snames = {
     "DISTRIBUE": "Distribué",
     "EN_COURS_DE_LIVRAISON": "En cours de livraison"
 }
-external_to_external_snames = {internal_to_external_snames[k]: k for k in internal_to_external_snames}
+external_to_internal_snames = {internal_to_external_snames[k]: k for k in internal_to_external_snames}
+
+esn_to_idstock = {
+    "LV": "S-0052",
+    "VI": "S-0053",
+    "MB": "S-0054",
+    "ST": "S-0055",
+    "SD": "S-0089",
+    "CR": "S-0090",
+    "RO": "S-0091",
+    "LI": "S-0092",
+    "LY": "S-0093",
+    "GR": "S-0094",
+    "MA": "S-0095",
+    "BX": "S-0096",
+}
+idstock_to_esn = {esn_to_idstock[k]: k for k in esn_to_idstock}

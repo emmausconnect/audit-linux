@@ -26,7 +26,7 @@ TMPSCANFILE=os.path.join( TMPDISK ,  FILESCAN)           # fichier d'export de l
 # infosdict={}  # donnees technique issues du scan systeme
 
 def SystemScan(inxifile):
-    result = subprocess.run(["sudo", "inxi", "-F", "-xx", "-y1", "--color", "0"], capture_output=True, text=True)
+    result = subprocess.run(["sudo", "inxi", "-F", "-xx", "-y1", "--color", "0"], capture_output=True, text=True, check=False)
     with open(f"{inxifile}", "w") as f:
         f.write(result.stdout)
     pass

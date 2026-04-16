@@ -30,9 +30,9 @@ then
 fi
 
 export AUDITDIR=$(readlink -e $(dirname $0))
-echo "AUDITDIR=${AUDITDIR}"
-printf "Liste de paramètres:\n"
-for v in $*; do printf ">$v<\n"; done
+#echo "AUDITDIR=${AUDITDIR}"
+#printf "Liste de paramètres:\n"
+#for v in $*; do printf ">$v<\n"; done
 
 cd $dir
 
@@ -49,6 +49,4 @@ cd $dir
 # left as it was but why not:
 #   python3 -B audit.py $*
 # ?
-python3 -B audit.py $1 $2 $3
-
-
+python3 -B audit.py $*

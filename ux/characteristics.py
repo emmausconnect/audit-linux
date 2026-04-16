@@ -3,7 +3,6 @@ import sys
 import json
 import platform
 import subprocess
-import logging
 import glob
 import re
 from math import sqrt
@@ -36,16 +35,20 @@ def _search_for_dict(j, key: str = "id", value: str = " core"):
 
 def _search_for_root(d: dict) -> dict | None:
     retd = dict()
+    _logger.debug(f"_search_for_root({d=})")
     if not d['mountpoint']:
         if d.get('children'):
             for _ in d.get('children'):
                 retd = _search_for_root(_)
                 if retd:
+                    _logger.debug(f"_search_for_root ==> {retd}")
                     return retd
         else:
+            _logger.debug(f"_search_for_root ==> {retd}")
             return retd
     else:
         if d['mountpoint'] == '/':
+            _logger.debug(f"_search_for_root ==> {d}")
             return d
 
 
@@ -69,7 +72,7 @@ def _get_platform_info(fil: str) -> infosDict:
     # result = subprocess.run(["LC_ALL=C", "sudo", "lshw", "-json"], capture_output=True, text=True)
     # "sudo" is mandatory, otherwise we don't get the 'vendor' key on which our processing is based
     result = subprocess.run(["sudo", "lshw", "-json"], capture_output=True, text=True,
-                            env={**os.environ, "LC_ALL": "C"})
+                            env={**os.environ, "LC_ALL": "C"}, check=False)
     with open(fil, "w") as f:
         f.write(result.stdout)
     _logger.debug(f"Les données générales (lshw) on été sauvegardées dans {fil}")
@@ -85,7 +88,7 @@ def _get_platform_info(fil: str) -> infosDict:
         return retd
 
     descr = d['description'].lower()
-    retd["Type"] = "UC" if ("desktop" in descr or "all" in descr) else "Portable"
+    retd["Type"] = "Fixe" if ("desktop" in descr or "all" in descr) else "Portable"
 
     if d["vendor"] == 'System manufacturer' or d["product"] == "VirtualBox":
         # not a branded system: very likely with home-assembled desktops
@@ -126,7 +129,7 @@ def _get_disk_info(fil: str) -> infosDict:
 
     result = subprocess.run(["sudo", "lsblk", "-Jb",
                              "-o", "name,type,size,rota,tran,vendor,model,fstype,mountpoint,serial"],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, check=False)
     with open(fil, "w") as f:
         f.write(result.stdout)
     _logger.debug(f"Les données relatives aux disques (lsblk) on été sauvegardées dans {fil}")
@@ -142,29 +145,34 @@ def _get_disk_info(fil: str) -> infosDict:
 
     # keep only 'sata' and 'nvme' devices
     bdevs = [_ for _ in bdevs if _['type'] == 'disk' and _['tran'] in {"sata", "nvme"}]
+    retd: infosDict = {"DisqueTaille": 0, "DisqueRef": "", "DisqueID": "", "DisqueType": ""}
+    snmaindisk = "inconnu"
 
-    # we focus only on the device on which the / partition is mounted
-    x = None
-    for rootdev in bdevs:
-        if x := _search_for_root(rootdev):
-            break
+    if bdevs:
+        # we focus only on the device on which the / partition is mounted
+        x = None
+        rootdev = dict()
+        for rootdev in bdevs:
+            if x := _search_for_root(rootdev):
+                break
 
-    if not x:
-        _logger.warning("Le point de montage de / n'a pas été trouvé. Bizarre...")
+        if not x:
+            _logger.warning("Le point de montage de / n'a pas été trouvé. Bizarre...")
 
-    retd: infosDict = {
-        "DisqueTaille": disk_size(rootdev),
-        "DisqueRef": rootdev['model'],
-        "DisqueID": f"/dev/{rootdev['name']}",
-        "DisqueType": disk_type(rootdev)
-    }
+        if rootdev:
+            retd: infosDict = {
+                "DisqueTaille": disk_size(rootdev),
+                "DisqueRef": rootdev['model'],
+                "DisqueID": f"/dev/{rootdev['name']}",
+                "DisqueType": disk_type(rootdev)
+            }
+            snmaindisk = rootdev.get('serial', "inconnu")
 
     _logger.debug(f"infos disque principal = {retd}")
 
-    snmaindisk = rootdev.get('serial', "inconnu")
     result = subprocess.run(["sudo", "lsblk", "-Jbd",
                              "-o", "name,type,size,rota,tran,vendor,model,fstype,mountpoint,serial"],
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, check=False)
     disks = json.loads(result.stdout)['blockdevices']
     _logger.debug(disks)
     disks = [_ for _ in disks if _['type'] == 'disk' and _['tran'] in {"sata", "nvme"} and _['serial'] != snmaindisk]
