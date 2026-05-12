@@ -29,10 +29,10 @@ def ComputeCategorie( csvregles , note):
     for item in table:
         cat=item[section]
         if str(note) == item["NOTE"]:
-            return cat
+            return cat.upper()
 
     # pas trouve ! on prend le dernier de la liste
-    return cat
+    return cat.upper()
 
 #--------------------------------------------------
 # Calcule la note de base ( CPU, RAM, DISK ) , en fonction des infos de regles.csv

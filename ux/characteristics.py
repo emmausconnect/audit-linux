@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import json
@@ -119,7 +120,7 @@ def _get_platform_info(fil: str) -> infosDict:
     return retd
 
 
-def _get_disk_info(fil: str) -> infosDict:
+def _get_disk_info(fil: str, testmode: bool = False) -> infosDict:
 
     def disk_type(dinf: dict[str, str | int]) -> str:
         return 'HDD' if dinf['rota'] else 'NVME' if dinf['tran'] == 'nvme' else 'SSD'
@@ -127,14 +128,18 @@ def _get_disk_info(fil: str) -> infosDict:
     def disk_size(dinf: dict[str, str | int]) -> int:
         return int(dinf['size'] / GB)
 
-    result = subprocess.run(["sudo", "lsblk", "-Jb",
-                             "-o", "name,type,size,rota,tran,vendor,model,fstype,mountpoint,serial"],
-                            capture_output=True, text=True, check=False)
-    with open(fil, "w") as f:
-        f.write(result.stdout)
-    _logger.debug(f"Les données relatives aux disques (lsblk) on été sauvegardées dans {fil}")
-
-    bdevs = json.loads(result.stdout)['blockdevices']
+    if testmode and os.path.isfile(fil):
+        with open(fil, 'r') as jf:
+            bdevs = json.load(jf)['blockdevices']
+            _logger.debug(f"Les données relatives aux disques (lsblk) on été chargées depuis {fil}")
+    else:
+        result = subprocess.run(["sudo", "lsblk", "-Jb",
+                                 "-o", "name,type,size,rota,tran,vendor,model,fstype,mountpoint,serial"],
+                                capture_output=True, text=True, check=False)
+        bdevs = json.loads(result.stdout)['blockdevices']
+        with open(fil, "w") as f:
+            f.write(result.stdout)
+        _logger.debug(f"Les données relatives aux disques (lsblk) on été sauvegardées dans {fil}")
 
     ## notes:
     ##   -SIZE is in bytes (-b)
@@ -144,7 +149,7 @@ def _get_disk_info(fil: str) -> infosDict:
     ##       +"nvme" for NVMe
 
     # keep only 'sata' and 'nvme' devices
-    bdevs = [_ for _ in bdevs if _['type'] == 'disk' and _['tran'] in {"sata", "nvme"}]
+    bdevs = [_ for _ in bdevs if _['type'] == 'disk' and _['tran'] in {"ata", "sata", "nvme"}]
     retd: infosDict = {"DisqueTaille": 0, "DisqueRef": "", "DisqueID": "", "DisqueType": ""}
     snmaindisk = "inconnu"
 
@@ -175,7 +180,7 @@ def _get_disk_info(fil: str) -> infosDict:
                             capture_output=True, text=True, check=False)
     disks = json.loads(result.stdout)['blockdevices']
     _logger.debug(disks)
-    disks = [_ for _ in disks if _['type'] == 'disk' and _['tran'] in {"sata", "nvme"} and _['serial'] != snmaindisk]
+    disks = [_ for _ in disks if _['type'] == 'disk' and _['tran'] in {"ata", "sata", "nvme"} and _['serial'] != snmaindisk]
 
     retd["AutresDisques"] = [(disk_type(_), disk_size(_), _['model'], _['serial']) for _ in disks]
 
@@ -248,6 +253,9 @@ def get_machine_infos(datestamp: str) -> infosDict:
 
 
 if __name__ == "__main__":
+    Tracer().set_main_level(logging.DEBUG)
+    tfil = "jean-jacques-20260430/lsblk-20260501.011533.json"
+    dinfos_ = _get_disk_info(tfil, testmode=True)
     infos_ = get_machine_infos("19610306.103088")
     _logger.debug(infos_)
     sys.exit(0)

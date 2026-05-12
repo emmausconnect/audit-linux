@@ -153,7 +153,8 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
             mynewpc = api.update_equipment(d)
         except Exception as exc:
             _logger.error(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
-        _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
+        else:
+            _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         _logger.info(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
         d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond)
@@ -164,7 +165,8 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
             mynewpc = api.create_equipment(d)
         except Exception as exc:
             _logger.error(f"La création de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
-        _logger.info(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
+        else:
+            _logger.info(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
 
     # we trustfully use the existing naming scheme...
     dest = os.path.join("..", ecid, f"{ecid}.tect.csv")

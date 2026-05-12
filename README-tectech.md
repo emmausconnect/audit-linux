@@ -26,13 +26,18 @@ Pour mémoire, il se base sur la [dernière version publiée par Bernard](https:
 tar xzf linux-x.y.z.tgz
 ```
 
-# Rapporter des anomalies, faire des suggestions, …
+# Rapporter une anomalie, faire des suggestions, …
 
-Pour des questions générales ou des suggestions, je suggère d'utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
+Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
 
 Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution depuis la ```4.3.0```. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
 ```
 [INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
+```
+Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
+```
+/tmp/lshw-20260406.112818.txt
+/tmp/lsblk-20260406.112818.txt
 ```
 
 
@@ -61,12 +66,21 @@ L'outil s'appelle directement avec le script ```audit.sh```. Le script ```menu.s
 
 Il y a ensuite plusieurs façons lancer l'audit, selon qu'on veut fournir l'*idEsn* sur la ligne de commande et selon qu'on choisit d'accéder à la base tec.tech de test ([https://tec-tech.osc-fr1.scalingo.io](https://tec-tech.osc-fr1.scalingo.io)) ou à celle de prod ([https://tec-tech-prod.osc-fr1.scalingo.io](https://tec-tech-prod.osc-fr1.scalingo.io)).
 
-Les différentes façons d'appeler l'outil sont (on prend l'*idEsn* ```GRPC26-0043``` comme exemple):
+##### Obtenir une aide en ligne complète
+```commandline
+bash audit.sh -h
 ```
-sudo bash audit.sh                         # [1] idEsn sera demandé, la base de PROD est choisie
-sudo bash audit.sh GRPC26-0043             # [2] la base de PROD est choisie
-sudo bash audit.sh [PROD|TEST]             # [3] idEsn sera demandé et la base est explicitement désignée
-sudo bash audit.sh GRPC26-0043 [PROD|TEST] # [4] idEsn et la base sont explicitement désignés
+##### Usage standard: audit puis transferts vers base d'audits et tec.tech
+```commandline
+bash audit.sh -i eePCaa-nnnn
+```
+##### Mini-audit: réaliser un audit sans identifier le PC et quitter
+```commandline
+bash audit.sh --mini
+```
+##### Usage avancé: utilisation de la base tec.tech de test
+```commandline
+bash audit.sh -i eePCaa-nnnn --test
 ```
 
 Lors de l'audit, si l'équipement existe déjà dans tec.tech, l'outil le met à jour, sinon, il le crée, le tout avec les données collectées lors de l'audit.

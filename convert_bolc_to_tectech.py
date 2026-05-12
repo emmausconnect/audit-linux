@@ -92,7 +92,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         ## ==> we use idLot instead
         d['idLot'] = idlot
         # 1: Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
-        d['idMaterielReconditionneur'] = idmaterielreconditionneur
+        d['idMaterielReconditionneur'] = idmaterielreconditionneur if idmaterielreconditionneur else vals[2]
         # 2: Admin.ECID,                 # identifiant EmmausEC
         d['idEsn'] = vals[2]
         # 3: infos["Type"],              # type de matériel (Portable, Fixe, Tablette)

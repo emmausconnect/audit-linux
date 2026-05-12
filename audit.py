@@ -39,6 +39,7 @@ from outils import Browser, MakeZip, Editor, ChdirScript
 from outils import TransfertTectech, TransfertEmmaus, GetRemoteVersionInfo, DownloadFile
 from cpumark import FindCpuMark
 from categorie import ComputeCategorie, ComputeNote, ComputeNoteModif
+import category
 from  rtf import MakeRTF
 # from ihm  import *
 from ihm import Zdialog, Zhbox, Zvbox, Zlistbox, Zentry, Zbutton, Ztext, Zradio, Zgrid, Zhcell, Zinputbox
@@ -62,6 +63,8 @@ DECOUVERTE=f"DecouverteMonPC-{OSTARGET}"      # Répertoire des docs à recopier
 
 CSVREGLES="regles.csv"                        # fichier .csv décrivant les règles de calcul des notes
 # CPUBENCHMARK="https://www.cpubenchmark.net/CPU_mega_page.html"
+
+CATEGORIZATIONLOGFILE="categorization.log"  # see category.py
 
 #==================================================================
 # infos administratives
@@ -122,16 +125,21 @@ def ManualTechInfos(infdic, cpumark):
         vboxother=Zvbox(hbox,2,2)
 
         # Obtention du disque, et stockage de la taille dans les valeurs SSD ou HDD
-        boxdisk=Zvbox(vbox,2,2,"Disque")
+        boxdisk=Zvbox(vbox,2,2,"Disques")
         if False and disktype == "":
             Ztext(boxdisk,"Type de disque non détecté !")
             msgdisk= f"Pour savoir si le disque est un HDD ou un SSD, vous pouvez chercher sa référence sur Internet: {infdic['DisqueRef']}"
             Ztext(boxdisk,msgdisk)
             Zlistbox(dialog, boxdisk, "DISK", "Type de disque", [ "HDD", "SSD" ] , "HDD" )
         else:
-            _ = disktype + ("/nvme" if infdic.get("NVME") else "/ata") if disktype == "SSD" else ""
+            _ = disktype + ("/NVME" if infdic.get("NVME") else "/ATA") if disktype == "SSD" else ""
             msgdisk = f"Disque principal: {_} - {infdic.get('DisqueTaille')} Go"
-            msgdisk += f"\nAutres disques: {infdic.get('AutresDisques')}"
+            autres = infdic.get('AutresDisques')
+            if autres:
+                autres = [('SSD/ATA' if d[0] == 'SSD' else 'SSD/NVME' if d[0] == 'NVME' else 'HDD',
+                           d[1], d[2], d[3]) for d in autres]
+            msgdisk += f"\nAutres disques:"
+            msgdisk += ''.join([f"\n  {d[0]} - {d[1]}Go - {d[2]}" for d in autres])
             Ztext(boxdisk,msgdisk)
 
         boxram=Zvbox(vbox,2,2,"RAM")
@@ -139,14 +147,14 @@ def ManualTechInfos(infdic, cpumark):
 
         # saisie du cpumark, si pas trouvé
         boxcpu=Zvbox(vbox,5,5,"CPU")
-        Ztext(boxcpu,f'Type de CPU: {infdic["Processeur"]}')
+        Ztext(boxcpu,f'{infdic["Processeur"]}')
 
-        Zentry(dialog, boxcpu, "CPUMARK", "cpumark: ", "r", cpumark)
+        Zentry(dialog, boxcpu, "CPUMARK", "Indice: ", "r", cpumark)
 
         # ajustement note
-        boxdelta = Zhbox( vbox,5 ,5,"Ajustement de la note" )
-        Zlistbox(dialog,  boxdelta, "NoteTechnique", "Note technique", [ "-2","-1","0","1"] , "0")
-        Zlistbox(dialog,  boxdelta,  "NoteEsthetique", "Note esthétique", [ "-1","0","1"] , "0")
+        boxdelta = Zhbox(vbox, 5, 5, "Ajustement de la note")
+        Zlistbox(dialog, boxdelta, "NoteTechnique", "Note technique", ["-2", "-1", "0", "1"], "0")
+        Zlistbox(dialog, boxdelta, "NoteEsthetique", "Note esthétique", ["-1", "0", "1"], "0")
 
         # autres infos
         pctypes=["Portable", "Fixe", "Tablette"]
@@ -503,7 +511,7 @@ def MakeFiches(infdic, filesmartphone, filedouchette):
 
     #------------------------  avec qrcode format douchette
     # le contenu correspond exactement aux champs coté database Salesforce . Donc formatage hyper complexe
-    if Admin.categorie == "Premium":
+    if Admin.categorie == "PREMIUM":
         tmpcat = "Ordinateur - PREMIUM"
     else:
         tmpcat = f"Ordinateur - Catégorie {Admin.categorie}"
@@ -900,6 +908,31 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
 
     Admin.categorie=ComputeCategorie( CSVREGLES,Admin.notenet)
     _logger.info(f"Categorie={Admin.categorie}")
+
+    try:
+        if infos["DisqueType"] == "HDD":
+            newcatdsktyp = "HDD"
+        else:
+            newcatdsktyp = "SSDNVME" if infos.get("NVME") == "oui" else "SSDATA"
+        newcatc, newcatr, newcatd, newcatntot, newcatcat, newcatdet = category.compute_category(
+            int(infos["CPUMARK"]), int(infos["RAM"]), int(infos["DisqueTaille"]), newcatdsktyp)
+    except (category.ComputeCategoryError, Exception) as newcatexc:
+        _logger.warning(f"Erreur lors du calcul de la nouvelle catégorie: {newcatexc}")
+    else:
+        _logger.info(f"Nouveau calcul: note={newcatntot}, catégorie={newcatcat}, Détails: '{newcatdet}'")
+        if newcatntot != Admin.notenet or newcatcat != Admin.categorie:
+            _logger.warning(f"...différence détectée! veuillez signaler au mainteneur")
+            td = {
+                "date": DATESTAMP, "version": __version__,
+                "cpumark": int(infos["CPUMARK"]), "ram": int(infos["RAM"]), "disqueTaille": int(infos["DisqueTaille"]),
+                "newcatdsktyp": newcatdsktyp, "newcatc": newcatc, "newcatr": newcatr, "newcatd": newcatd,
+                "newcatntot": newcatntot, "newcatcat": newcatcat, "newcatdet": newcatdet,
+                "oldnotenet": Admin.notenet, "oldcategorie": Admin.categorie, "oldtxtnotes": ", ".join(Admin.txtnotes)
+            }
+            tds = json.dumps(td) + '\n'
+            category.add_data_to_remote_logfile(CATEGORIZATIONLOGFILE, tds)
+        else:
+            _logger.info("...pas de différence")
 
     #------------------- affichage rapide ------------------------
     filename=os.path.join( TMPDISK , "infos.txt")

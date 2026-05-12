@@ -189,6 +189,9 @@ class TecTapiBolcFileConversionError(TecTapiError):
 class TecTapiMissingMandatoryValueError(TecTapiError):
     pass
 
+class TecTapiEmptyMandatoryValueError(TecTapiError):
+    pass
+
 class TecTapiUsingIdOnEquipmentCreation(TecTapiError):
     pass
 
@@ -508,7 +511,7 @@ class TecTAPI:
         #    "idMaterielReconditionneur": "EM_2510_0049",  # mandatory by tec.tech docs
         #    "statut": "PRET_A_DISTRIBUER",                # mandatory by tec.tech docs
         #    "idStock": "S-0094",                          # mandatory by tec.tech docs
-        #    "numeroSerie": "FDCDXS2",                     # mandatory by tec.tech docs
+        #    "numeroSerie": "FDCDXS2",                     # NOT mandatory by tec.tech docs
         #    "idLot": "L-0048"                             # mandatory by tec.tech docs
         # This field is optional for tec.tech, mandatory for ESN Grenoble:
         #    "idEsn": "GRPC25-0322"                       # not mandatory at this time
@@ -520,11 +523,16 @@ class TecTAPI:
         #    at this time
 
         # check that the mandatory fields are here
-        mandfields = {'idEsn', 'typeMateriel', 'idMaterielReconditionneur', 'statut', 'idStock', 'idLot', 'numeroSerie'}
+        mandfields = {'idEsn', 'typeMateriel', 'idMaterielReconditionneur', 'statut', 'idStock', 'idLot'}
         if not mandfields < set(mat.keys()):
             mandfieldvals = ', '.join ([f"{_}: {mat[_]}" for _ in mandfields])
             errmsg = f"Au moins un champ obligatoire manque pour la création ({mandfieldvals})"
             raise TecTapiMissingMandatoryValueError(errmsg)
+
+        emptyfields = {_ for _ in mandfields if not d_[_]}
+        if emptyfields:
+            errmsg = f"Au moins un champ obligatoire n'pas de valeur pour la création ({emptyfields})"
+            raise TecTapiEmptyMandatoryValueError(errmsg)
 
         # check that we are not accidentally updating an existing equipment
         if 'id' in mat:
@@ -656,6 +664,34 @@ if __name__ == "__main__":
 
     fmt_ = "%Y-%m-%d %H:%M:%S"
     updtime_ = datetime.strftime(datetime.now(), fmt_)
+
+    pcpr_ = "GRPC26-9999"
+    grpc26_9999_ = api_.lookup_equipment(pcpr_)
+    if grpc26_9999_:
+        _logger.info("GRPC26-9999 existe déjà; on va faire une mise à jour")
+        grpc26_9999_['statut'] = grpc26_9999_['statut']['libelle']
+        grpc26_9999_.pop('nomStructure')
+        grpc26_9999_.pop('idDon')
+        mygrpc26_9999_ = api_.update_equipment(grpc26_9999_)
+    else:  # il s'agit d'une création
+        d_ = {'idLot': 'L-0673', 'idMaterielReconditionneur': 'GRPC26-9999', 'idEsn': 'GRPC26-9999',
+              'typeMateriel': 'ORDINATEUR_PORTABLE', 'categorie': 'B', 'statut': 'PRET_A_DISTRIBUER', 'marque': 'DELL',
+              'model': 'Latitude 5580 (07A8)', 'numeroSerie': '260509X8888',
+              'processeur': 'Intel(R) Core(TM) i5-6300U CPU @ 2.40GHz', 'typeDisqueDur1': 'SSD',
+              'tailleDisqueDur1': 500, 'RAM': 16, 'webcam': True, 'systemeExploitation': 'Linux', 'idStock': 'S-0094',
+              'commentaire': 'cpumark: 3201 / Batterie: 93.8% / Écran: 15.5 / Observations:  / PondTech: 0 / PondEsth: 0 / Bénévole: Paul / Origine:  / Linux Mint 22.3 / audit-linux-4.3.1+'}
+
+        # d_ = {'idLot': 'L-0048', 'idMaterielReconditionneur': 'EM_2602_9999', 'idEsn': pcpr_,
+        #       'typeMateriel': 'ORDINATEUR_PORTABLE', 'categorie': 'B', 'statut': 'PRET_A_DISTRIBUER', 'marque': 'APPLE',
+        #       'model': 'MacBookPro12,1', 'numeroSerie': 'C02SX6JJFVH4', 'processeur': 'Intel Core i5-5257U',
+        #       'typeDisqueDur1': 'SSD', 'tailleDisqueDur1': 251, 'RAM': 9, 'systemeExploitation': 'Linux',
+        #       'idStock': 'S-0094',
+        #       'commentaire': 'cpumark: 2837 / Batterie: 75.4% / Écran: 13.3 / Observations:  / PondTech: 0 / PondEsth: 0 / Bénévole: Gérard / Origine: ESN'}
+        ds_ = json.dumps([d_]).encode('utf-8')
+
+        mygrpc26_9999_ = api_.create_equipment(d_)
+        pass
+
 
     dros_ = "GRPC26-9999"
     sn_ = "2CE347155K"

@@ -1,3 +1,4 @@
+# Version actuelle
 ## Si vous utilisez cet outil pour la première fois…
 
 - l'outil peut être téléchargé depuis le site [audits.emmaus-connect.org](https://audits.emmaus-connect.org/api/apps/linux/web) sous la forme d'un fichier ```linux-x.y.z.tgz```
@@ -7,9 +8,47 @@
 tar xzf linux-x.y.z.tgz
 ```
 
-### Et toujours: n'oubliez pas de lire le fichier README.pdf 😃
+#### Ensuite, ```README.pdf``` reste la référence 😃
+
+Depuis la ```4.3.1```, le style d'appel de la commande a changé. Voici des exemples pour les cas les plus courants:
+##### Usage standard: audit puis transferts vers base d'audits et tec.tech
+```commandline
+bash audit.sh -i eePCaa-nnnn
+```
+##### Mini-audit: réaliser un audit sans identifier le PC et quitter
+```commandline
+bash audit.sh
+```
+##### Aide plus complète
+```commandline
+bash audit.sh -h
+```
 
 
+## 4.4.0
+
+- le bug (signalé par Philippe P.) qui bloquait la création d'un matériel en l'absence d'un idMaterielReconditionneur est corrigé: dans un tel cas on force sa valeur à celle de idEsn
+
+- les PC avec un disque principal utilisant une connexion ATA, généralement très vieux, sont désormais bien pris en compte (limite signalée par Jean-Jacques F.)
+
+- j'ai introduit une nouvelle implémentation, encore en cours de test, de la procédure de catégorisation; à ce jour, elle n'a aucune incidence sur l'audit: elle est exécutée en plus et, en cas d'écart, alimente une base de données qui est analysée par ailleurs
+
+
+## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
+
+Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
+
+Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution depuis la ```4.3.0```. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
+```
+[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
+```
+Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
+```
+/tmp/lshw-20260406.112818.txt
+/tmp/lsblk-20260406.112818.txt
+```
+
+# Versions antérieures
 ## 4.3.1
 
 - le bug relatif au calcul de la note en cas de SSD est corrigé (signalé par Charles M.)
@@ -23,7 +62,7 @@ tar xzf linux-x.y.z.tgz
 - la gestion des "marques" a été améliorée pour les cas où la marque détectée ne correspond pas exactement a une de celles listées dans tec.tech
 
 
-## 4.3.0
+## 4.3.0 - ne pas utiliser (cette version a un bug gênant dans le cas ou le disque principal est un SSD)
 
 Cette version est importante quoique quasiment *cosmétique*. Vu des utilisateurs, l'intention est de marquer une pause dans les modifications fonctionnelles en attendant un plus large retour d'expérience.
 
@@ -155,6 +194,6 @@ Ceci est une version de test, la toute première version de l'audit Linux destin
 Elle a plusieurs limites et défauts déjà identifiés:
 
 - ne fonctionne qu'avec le script `audit.sh` (`menu.sh` n'est pas garanti de bien marcher avec tec.tech)
-- ne permet d'agir que sur des matériels déjà présents danstec.tech
+- ne permet d'agir que sur des matériels déjà présents dans tec.tech
 - identifie un matériel par son seul 'idEsn' (pas encore par 'idMaterielReconditionneur')
 - manque un peu de verbosité (pouvant aider au debug en cette phase de test)
