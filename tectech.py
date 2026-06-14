@@ -529,7 +529,7 @@ class TecTAPI:
             errmsg = f"Au moins un champ obligatoire manque pour la création ({mandfieldvals})"
             raise TecTapiMissingMandatoryValueError(errmsg)
 
-        emptyfields = {_ for _ in mandfields if not d_[_]}
+        emptyfields = {_ for _ in mandfields if not mat[_]}
         if emptyfields:
             errmsg = f"Au moins un champ obligatoire n'pas de valeur pour la création ({emptyfields})"
             raise TecTapiEmptyMandatoryValueError(errmsg)

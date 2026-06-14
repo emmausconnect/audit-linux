@@ -24,14 +24,19 @@ bash audit.sh
 bash audit.sh -h
 ```
 
+## 4.4.1
 
-## 4.4.0
+Cette version corrige quelques défauts mineurs:
 
-- le bug (signalé par Philippe P.) qui bloquait la création d'un matériel en l'absence d'un idMaterielReconditionneur est corrigé: dans un tel cas on force sa valeur à celle de idEsn
+- la "*CPU string*" est désormais correctement extraite sur certains équipements (signalé par Philippe R. et, à ce jour, visible seulement sur certains MacBook)
 
-- les PC avec un disque principal utilisant une connexion ATA, généralement très vieux, sont désormais bien pris en compte (limite signalée par Jean-Jacques F.)
+- le résultat de la commande ```inxi``` est désormais traité comme du binaire pour créer le fichier ```scan-linux.txt``` (signalé par Charles M.: sur un équipement particulier, unique à ce jour, le résultat de ```inxi``` ne se décode pas en UTF-8)
 
-- j'ai introduit une nouvelle implémentation, encore en cours de test, de la procédure de catégorisation; à ce jour, elle n'a aucune incidence sur l'audit: elle est exécutée en plus et, en cas d'écart, alimente une base de données qui est analysée par ailleurs
+- une référence (Python) erronée lors de la création d'un équipement a été corrigée (signalé par Martin G.)
+
+- la nouvelle implémentation, encore en cours de test, de la procédure de catégorisation intègre désormais le bonus/malus technique ou esthétique (aucune incidence pour vous)
+
+Cette version devrait être la dernière de la lignée ```4.x.y```. En effet, il est prévu que **la prochaine version (```5.x.y```) introduise un changement majeur**: l'utilisation de l'```idEsn``` ne sera plus obligatoire. 
 
 
 ## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
@@ -49,6 +54,15 @@ Dans certains cas, il peut aussi être intéressant de joindre les fichiers suiv
 ```
 
 # Versions antérieures
+## 4.4.0
+
+- le bug (signalé par Philippe P.) qui bloquait la création d'un matériel en l'absence d'un idMaterielReconditionneur est corrigé: dans un tel cas on force sa valeur à celle de idEsn
+
+- les PC avec un disque principal utilisant une connexion ATA, généralement très vieux, sont désormais bien pris en compte (limite signalée par Jean-Jacques F.)
+
+- j'ai introduit une nouvelle implémentation, encore en cours de test, de la procédure de catégorisation; à ce jour, elle n'a aucune incidence sur l'audit: elle est exécutée en plus et, en cas d'écart, alimente une base de données qui est analysée par ailleurs
+
+
 ## 4.3.1
 
 - le bug relatif au calcul de la note en cas de SSD est corrigé (signalé par Charles M.)

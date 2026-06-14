@@ -19,7 +19,9 @@ type infosDict = dict[str, str | int | list[tuple[str, int, str, str]]]
 def _search_for_dict(j, key: str = "id", value: str = " core"):
     ret = dict()
     if isinstance(j, dict):
-        if j.get(key)== value:
+        # we need the re matching here to address cases like where we look for "cpu" in "cpu:0"
+        v = j.get(key)
+        if v and re.match(r"(?P<f>(\w+)).*", v).groupdict().get('f') == value:
             return j
         else:
             for k in j:
@@ -65,22 +67,27 @@ def _look_for_webcam() -> list:
     return retd
 
 
-def _get_platform_info(fil: str) -> infosDict:
+def _get_platform_info(fil: str, testmode: bool = False) -> infosDict:
     entries = ['Type', 'Marque', 'Modele', 'NumeroSerie', 'Processeur', 'RAM']
     retd: dict[str, str | int] = dict.fromkeys(entries, "")
     retd["RAM"] = 0
 
-    # result = subprocess.run(["LC_ALL=C", "sudo", "lshw", "-json"], capture_output=True, text=True)
-    # "sudo" is mandatory, otherwise we don't get the 'vendor' key on which our processing is based
-    result = subprocess.run(["sudo", "lshw", "-json"], capture_output=True, text=True,
-                            env={**os.environ, "LC_ALL": "C"}, check=False)
-    with open(fil, "w") as f:
-        f.write(result.stdout)
-    _logger.debug(f"Les données générales (lshw) on été sauvegardées dans {fil}")
+    if testmode and os.path.isfile(fil):
+        with open(fil, 'r') as jf:
+            j = json.load(jf)
+            _logger.debug(f"Les données générales (lshw) on été chargées depuis {fil}")
+    else:
+        # result = subprocess.run(["LC_ALL=C", "sudo", "lshw", "-json"], capture_output=True, text=True)
+        # "sudo" is mandatory, otherwise we don't get the 'vendor' key on which our processing is based
+        result = subprocess.run(["sudo", "lshw", "-json"], capture_output=True, text=True,
+                                env={**os.environ, "LC_ALL": "C"}, check=False)
+        with open(fil, "w") as f:
+            f.write(result.stdout)
+        _logger.debug(f"Les données générales (lshw) on été sauvegardées dans {fil}")
 
-    # with open(fil, 'r') as jf:
-    #     j = json.load(jf)
-    j = json.loads(result.stdout)
+        # with open(fil, 'r') as jf:
+        #     j = json.load(jf)
+        j = json.loads(result.stdout)
 
     # look for the system type: branded or DIY
     d = _search_for_dict(j, key="class", value="system")
@@ -254,6 +261,10 @@ def get_machine_infos(datestamp: str) -> infosDict:
 
 if __name__ == "__main__":
     Tracer().set_main_level(logging.DEBUG)
+    tfil = "GRPC26-0045/lshw-20260515.170911.json"
+    hinfos_ = _get_platform_info(tfil, testmode=True)
+    # infos_ = get_machine_infos("19610306.103088")
+    pass
     tfil = "jean-jacques-20260430/lsblk-20260501.011533.json"
     dinfos_ = _get_disk_info(tfil, testmode=True)
     infos_ = get_machine_infos("19610306.103088")

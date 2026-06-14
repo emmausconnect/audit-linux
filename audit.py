@@ -916,6 +916,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
             newcatdsktyp = "SSDNVME" if infos.get("NVME") == "oui" else "SSDATA"
         newcatc, newcatr, newcatd, newcatntot, newcatcat, newcatdet = category.compute_category(
             int(infos["CPUMARK"]), int(infos["RAM"]), int(infos["DisqueTaille"]), newcatdsktyp)
+        newcatntot += infos["NoteTechnique"] + infos["NoteEsthetique"]
     except (category.ComputeCategoryError, Exception) as newcatexc:
         _logger.warning(f"Erreur lors du calcul de la nouvelle catégorie: {newcatexc}")
     else:

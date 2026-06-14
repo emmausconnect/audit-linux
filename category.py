@@ -36,7 +36,7 @@ _cpu_mark_lookup = _make_lookup(_cpuTable)
 # _catTable: thresholdTable = ([(4, 5000), (6, 5001), (8, 5002), (11, 5003), (9999, 5004)], 5004)
 # _intcat_to_strcat = {5000: "D", 5001: "C", 5002: "B", 5003: "A", 5004: "PREMIUM"}
 
-def cat_lookup(val: int) -> str:
+def _cat_lookup(val: int) -> str:
     if val < 4:
         return "D"
     elif val < 6:
@@ -75,7 +75,7 @@ def compute_category(cpumark: int, ramsiz: int, dsksiz: int, dsktyp: str) -> tup
     ntot = ncpu + nram + ndsk
 
     details = "notes de base:"
-    cat = cat_lookup(ntot)
+    cat = _cat_lookup(ntot)
     details += f" CPU={ncpu}, RAM={nram}, DSK({dsktyp})={ndsk}, catégorie={cat}"
 
     if cpumark < 3500:
@@ -90,7 +90,7 @@ def compute_category(cpumark: int, ramsiz: int, dsksiz: int, dsktyp: str) -> tup
     else:
         if dsktyp == "SSDNVME":
             ntot += 1
-            cat = cat_lookup(ntot)
+            cat = _cat_lookup(ntot)
             details += f"; SSDNVME ==> catégorie = {cat}"
 
     return ncpu, nram, ndsk, ntot, cat, details
