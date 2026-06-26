@@ -1,11 +1,6 @@
-
-import os
-import sys
 import time
 import signal
-import sys
 import datetime
-import subprocess
 
 from ux.linux import *
 

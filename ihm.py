@@ -1,10 +1,4 @@
-import os
-import re
-
-if "HOME" in os.environ :
-    from ihmlinux import *
-else:
-    from ihmwin import *
+from ihmlinux import *
 
 #--------------------------------------------------------------------
 # InputBox avec un message et une zone de saisie

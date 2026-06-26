@@ -174,6 +174,9 @@ class TecTapiDuplicateEquipmentFound(TecTapiError):
 class TecTapiBadIdesnFormat(TecTapiError):
     pass
 
+class TecTapiIdesnIsNeededHere(TecTapiError):
+    pass
+
 class TecTapiReadOnlyField(TecTapiError):
     pass
 
@@ -363,53 +366,54 @@ class TecTAPI:
     def lookup_equipment(cls, idesn: str, numeroserie: str="") -> dict:
         _logger.info(f"Recherche de l'équipement {idesn=}, {numeroserie=}")
         # look for a "materiel" in tec.tech, based only on idEsn and numeroSerie
-        epmateriel = "materiel"
-        limit = 2
-        maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idEsn={idesn}&page=1&limit={limit}"
-        headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
-        req = urllib.request.Request(url=maturl, headers=headers, method="GET")
-        try:
-            with urllib.request.urlopen(req) as response:
-                body = response.read()
-                status = response.status
-                # code = response.code
-        except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
-            errmsg = f"La recherche de {idesn} a échoué ({exc})"
-            # _logger.error(errmsg)
-            raise TecTapiEquipmentNotFound(errmsg) from exc
+        if idesn:
+            epmateriel = "materiel"
+            limit = 2
+            maturl = f"{TecTAPI.__selected_prefix}/{epmateriel}?idEsn={idesn}&page=1&limit={limit}"
+            headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}
+            req = urllib.request.Request(url=maturl, headers=headers, method="GET")
+            try:
+                with urllib.request.urlopen(req) as response:
+                    body = response.read()
+                    status = response.status
+                    # code = response.code
+            except (urllib.error.HTTPError, urllib.error.URLError, Exception) as exc:
+                errmsg = f"La recherche de {idesn} a échoué ({exc})"
+                # _logger.error(errmsg)
+                raise TecTapiEquipmentNotFound(errmsg) from exc
 
-        if status != 200:
-            errmsg = f"La recherche de {idesn} a échoué (status: {status})"
-            # _logger.error(errmsg)
-            raise TecTapiEquipmentNotFound(errmsg)
+            if status != 200:
+                errmsg = f"La recherche de {idesn} a échoué (status: {status})"
+                # _logger.error(errmsg)
+                raise TecTapiEquipmentNotFound(errmsg)
 
-        d = json.loads(body.decode("utf-8"))
+            d = json.loads(body.decode("utf-8"))
 
-        nb = int(d['total'])
+            nb = int(d['total'])
 
-        if nb > 1:
-            errmsg = f"La recherche de {idesn} a trouvé plus d'une ({nb}) occurences"
-            # _logger.error(errmsg)
-            raise TecTapiDuplicateEquipmentFound(errmsg)
+            if nb > 1:
+                errmsg = f"La recherche de {idesn} a trouvé plus d'une ({nb}) occurences"
+                # _logger.error(errmsg)
+                raise TecTapiDuplicateEquipmentFound(errmsg)
 
-        if nb == 1:
-            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idEsn")
-            return d['data'][0]
+            if nb == 1:
+                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idEsn")
+                return d['data'][0]
 
-        # nb is certainly 0!
-        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idEsn a échoué")
+            # nb is certainly 0!
+            _logger.warning(f"La recherche de {idesn}/{numeroserie} par idEsn a échoué")
 
-        # try to look the equipment up based on idMaterielReconditionneur
-        try:
-            d = cls.lookup_equipment_by_idmatrec(idesn)
-        except (TecTapiEquipmentNotFound, Exception) as exc:
-            raise TecTapiEquipmentNotFound from exc
+            # try to look the equipment up based on idMaterielReconditionneur
+            try:
+                d = cls.lookup_equipment_by_idmatrec(idesn)
+            except (TecTapiEquipmentNotFound, Exception) as exc:
+                raise TecTapiEquipmentNotFound from exc
 
-        if d:
-            _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur==idEsn")
-            return d
+            if d:
+                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur")
+                return d
 
-        _logger.warning(f"La recherche de {idesn}/{numeroserie} par idMaterielReconditionneur a échoué")
+            _logger.warning(f"La recherche de {idesn}/{numeroserie} par idMaterielReconditionneur a échoué")
 
         if not numeroserie:
             return {}
@@ -441,23 +445,25 @@ class TecTAPI:
     @classmethod
     def update_equipment(cls, mat: dict) -> dict:
         # This method updates an EXISTING equipment:
-        #   -"mat" must contain at least a valid idEsn: if not the method raises an Exception
+        #   -"mat" must contain at least an idEsn
         #   -it also contains the <field, value> pairs that must be updated on the server side
         #      .each such field must exist in the data model (i.e., belong to the set of known fields - 26 at the time
         #      of writing)
         #      .the method does not check thouroughly the "values" since their syntax is not very strictly defined
         #      at this time
 
-        # check the format of idEsn
-        idesn = mat.get('idEsn')
-        if not idesn or not IdesnParser().parse(idesn):
-            errmsg = f"L'idEsn {idesn} est mal formé"
-            raise TecTapiBadIdesnFormat(errmsg)
+        lookupid = mat.get('idEsn')
+        if not lookupid:
+            lookupid = mat.get('idMaterielReconditionneur')
+
+        if not lookupid:
+            errmsg = f"Erreur interne: idEsn ou idMaterielReconditionneur est obligatoire à ce stade"
+            raise TecTapiIdesnIsNeededHere(errmsg)
 
         # check that the equipment already exists
         numser = mat.get('numeroSerie')
         try:
-            previous = cls.lookup_equipment(idesn, numser)
+            previous = cls.lookup_equipment(lookupid, numser)
         except TecTapiError as exc:
             raise TecTapiEquipmentNotFound from exc
 
@@ -487,16 +493,16 @@ class TecTAPI:
                 status = response.status
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
             # errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason}/{exc.read().decode("utf-8")})'
-            errmsg = f'Erreur serveur lors de la mise à jour de {idesn} ({exc.code}: {exc.reason})'
+            errmsg = f'Erreur serveur lors de la mise à jour de {lookupid} ({exc.code}: {exc.reason})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg) from exc
         except Exception as exc:
-            errmsg = f'La mise a jour de {idesn} a échoué ({exc})'
+            errmsg = f'La mise a jour de {lookupid} a échoué ({exc})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg) from exc
 
         if status not in [201]:  # is 200 valid here?
-            errmsg = f'La recherche de {idesn} a échoué (status: {status})'
+            errmsg = f'La recherche de {lookupid} a échoué (status: {status})'
             # _logger.error(errmsg)
             raise TecTapiUpdateFailed(errmsg)
 
@@ -529,9 +535,9 @@ class TecTAPI:
             errmsg = f"Au moins un champ obligatoire manque pour la création ({mandfieldvals})"
             raise TecTapiMissingMandatoryValueError(errmsg)
 
-        emptyfields = {_ for _ in mandfields if not mat[_]}
+        emptyfields = {_ for _ in mandfields if _ != 'idEsn' and not mat[_]}
         if emptyfields:
-            errmsg = f"Au moins un champ obligatoire n'pas de valeur pour la création ({emptyfields})"
+            errmsg = f"Au moins un champ obligatoire n'a pas de valeur pour la création ({emptyfields})"
             raise TecTapiEmptyMandatoryValueError(errmsg)
 
         # check that we are not accidentally updating an existing equipment
@@ -542,8 +548,8 @@ class TecTAPI:
         # check the format of idEsn
         idesn = mat['idEsn']
         if not IdesnParser().parse(idesn):
-            errmsg = f"L'idEsn {idesn} est mal formé"
-            raise TecTapiBadIdesnFormat(errmsg)
+            _logger.warning(f"L'idEsn {idesn} est mal formé")
+            # raise TecTapiBadIdesnFormat(errmsg)
 
         maturl = f"{TecTAPI.__selected_prefix}/materiel"
         headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}

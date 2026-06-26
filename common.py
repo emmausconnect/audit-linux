@@ -26,7 +26,7 @@ def ReadCSV(filename, section):
         line = line.strip(" \r\n")
         items = line.split(SEP)
 
-        if (begin == False):
+        if not begin:
             # on passe les lignes, jusqu'à trouver la bonne section
             if section == "" or items[0] == section:
                 # cette ligne est le HEADER qui contient les noms de colonne

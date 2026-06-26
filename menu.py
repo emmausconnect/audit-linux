@@ -89,8 +89,8 @@ def MenuRecondActions(owner,id):
         filehtm=os.path.join("doc","index.htm")
         Browser( filehtm )
 
-    if id == "INITID":
-        Ecid().Reset()
+    if id == "INITID":  # this button serves no purpose after removal of Ecid class...
+        EqId().reset()  # Ecid().Reset()
 
 
     if id == "DISK":
@@ -165,7 +165,7 @@ def MenuRecond( withtest=True ):
         vbox1=Zvbox(hbox,5,5)
         vbox2=Zvbox(hbox,5,5)
 
-        if ( withtest ):
+        if withtest:
             btools=Zvbox(vbox1,5,5,"TESTS")
 
             Zbutton(dialog, btools ,"DISK", "Test Disque","LightGreen",MenuRecondActions)          # process en //

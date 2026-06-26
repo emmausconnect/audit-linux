@@ -13,17 +13,55 @@ tar xzf linux-x.y.z.tgz
 Depuis la ```4.3.1```, le style d'appel de la commande a changé. Voici des exemples pour les cas les plus courants:
 ##### Usage standard: audit puis transferts vers base d'audits et tec.tech
 ```commandline
-bash audit.sh -i eePCaa-nnnn
+bash audit.sh -i IdentifiantPC
 ```
 ##### Mini-audit: réaliser un audit sans identifier le PC et quitter
 ```commandline
-bash audit.sh
+bash audit.sh -m
 ```
 ##### Aide plus complète
 ```commandline
 bash audit.sh -h
 ```
 
+## 5.0.0
+
+Cette version introduit des **changements importants**:
+
+- l'utilisation du format `eePCaa-nnnn` pour identifier un PC n'est désormais plus obligatoire; les équipements sont désormais identifiés par une chaîne de caractères de format libre correspondant à `idMaterielReconditionneur` dans le cas où elle ne respecte pas le format `eePCaa-nnnn`; reportez-vous au `README.pdf` pour plus de détails
+
+- comme conséquence du point précédent, il est désormais nécessaire de spécifier l'ESN concerné; cela peut se faire de deux façons:
+  - soit via l'entrée `"esn"` de `techtech-credentials.json`,
+  - soit via le paramètre `-e|--esn` de la ligne de commande (supplante la valeur éventuellement présente dans `techtech-credentials.json`)
+
+- l'ancien style de passage des paramètres n'est plus disponible: chaque paramètre doit désormais être nommé; par exemple, au lieu de:
+    ```commandline
+    # syntaxe obsolète
+    bash audit.sh identifiant_quelconque
+    ```
+    on écrira:
+    ```commandline
+    # syntaxe valide
+    bash audit.sh -i identifiant_quelconque
+    ```
+
+
+## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
+
+Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
+
+Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
+```
+[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
+```
+Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
+```
+/tmp/lshw-20260406.112818.json
+/tmp/lsblk-20260406.112818.json
+```
+Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pas à un rédémarrage du PC.
+
+# Versions antérieures
 ## 4.4.1
 
 Cette version corrige quelques défauts mineurs:
@@ -37,7 +75,6 @@ Cette version corrige quelques défauts mineurs:
 - la nouvelle implémentation, encore en cours de test, de la procédure de catégorisation intègre désormais le bonus/malus technique ou esthétique (aucune incidence pour vous)
 
 Cette version devrait être la dernière de la lignée ```4.x.y```. En effet, il est prévu que **la prochaine version (```5.x.y```) introduise un changement majeur**: l'utilisation de l'```idEsn``` ne sera plus obligatoire. 
-
 
 ## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
 

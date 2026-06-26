@@ -7,7 +7,7 @@ from trace import Tracer
 _logger = Tracer().get_logger()
 
 import tectech_data
-from tectech import TecTapiBolcFileConversionError
+from tectech import TecTapiBolcFileConversionError, IdesnParser
 from __about__ import __version__
 
 # BOLC import file example
@@ -49,7 +49,7 @@ from __about__ import __version__
 # [('tailleDisqueDur1', {'type': 'number', 'nullable': True}), ('tailleDisqueDur2', {'type': 'number', 'nullable': True}), ('RAM', {'type': 'number', 'nullable': True})]
 
 
-def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielreconditionneur: str) -> dict:
+def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielreconditionneur: str, idesn: str) -> dict:
     # From a file that was ready to send to BOLC, create a dictionary suitable for updating a "materiel" on tec.tech
     # A BOLC-style file contains a single CSV line with 35 fields, like:
     # 3337;;GRPC26-0008;Portable;B;Prêt à vendre;;Apple;;;MacBookPro12,1;75.4%;;;C02SX6JJFVH4;Intel Core i5-5257U;SSD;251;;;9;;;13.3;0;0;2837;;Rudy;26/01/2026 15:17:45;Linux: Linux Mint 22.2 Zara;;;;ESN
@@ -83,6 +83,8 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
             return None
 
     try:
+        _logger.debug(f"{vals=}")
+        _logger.debug(f"{idlot=}, {idstock=}, {idmaterielreconditionneur=}, {idesn=}")
         if len(vals) != 35:
             raise TecTapiBolcFileConversionError
 
@@ -94,7 +96,7 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         # 1: Admin.idrecond,             # identifiant du  matériel chez le reconditionneur
         d['idMaterielReconditionneur'] = idmaterielreconditionneur if idmaterielreconditionneur else vals[2]
         # 2: Admin.ECID,                 # identifiant EmmausEC
-        d['idEsn'] = vals[2]
+        d['idEsn'] = vals[2] if IdesnParser().parse(vals[2]) else ''
         # 3: infos["Type"],              # type de matériel (Portable, Fixe, Tablette)
         d['typeMateriel'] = bolc_to_tectech_types[vals[3]]
         # 4: Admin.categorie,            # categorie  A B C D Premium INVENDABLE
@@ -158,11 +160,11 @@ def from_bolc_to_tectech(vals: list, idlot: str, idstock: str, idmaterielrecondi
         if idstock:
             d['idStock'] = idstock
         else:
-            d['idStock'] = esn_to_idstock.get(vals[2][0:2])
+            d['idStock'] = esn_to_idstock.get(idesn)
             _logger.info(f"La valeur >{d['idStock']}< de idStock (stock de rattachement) "
-                         f"a été déduite de >{vals[2][0:2]}<")
+                         f"a été déduite de >{idesn}<")
             if not d['idStock']:
-                raise ValueError(f"{vals[2][0:2]} n'a pas de stock de rattachement connu")
+                raise ValueError(f"{idesn} n'a pas de stock de rattachement connu")
 
         # 'commentaire' will hold some of the BOLC fields that fit nowhere in tec.tech structure
         d['commentaire'] = f"cpumark: {vals[26]} / Batterie: {vals[11]} / Écran: {vals[23]}"
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     idmaterielreconditionneur_ = "MAPC26-2026"
 
     try:
-        d_ = from_bolc_to_tectech(vals_, idlot_, idStock_, idmaterielreconditionneur_)
+        d_ = from_bolc_to_tectech(vals_, idlot_, idStock_, idmaterielreconditionneur_, "GR")
     except(TecTapiBolcFileConversionError, Exception) as exc_:
         _logger.error(exc_)
         d_ = {}

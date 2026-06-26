@@ -13,7 +13,7 @@
 # Version originelle ( basée sur Excel+VBA) : Philippe Ruppli / Bernard Maison
 #
 #====================================================================================
-
+import logging
 import time
 import datetime
 import html
@@ -47,6 +47,10 @@ from ux.linux import AuditMe, get_user_dirs, chown_to_user, Copy2Desktop, CopyFi
 
 from __about__ import __version__
 from ux.linux import TMPDISK, FILESCAN, TMPSCANFILE
+
+CREDSFILE = "tectech-credentials.json"
+ESNLIST = list(tectech_data.esn_to_idstock.keys())
+_logger.debug(f"Valid ESN list: {ESNLIST}")
 
 ZIPFILE=os.path.join(TMPDISK, "audit-zip.zip"   )   # zip des fichiers à envoyer vers audits.emmaus-connect.org
 
@@ -88,6 +92,9 @@ class Admin:
     bolcstatut=""       # statut dans le bolc
     auditdate=""        # date de l'audit
     nomcomm = ""        # modèle?
+
+    credsfile = CREDSFILE
+    esn = ""
 
 
 def DataSave(somedir, file, data):
@@ -258,7 +265,7 @@ def ManualAdminInfosIHM(infdic, title, margin=2, spacing=2):
 #
 # Ils sont generés dans le répertoire ../ECID
 #---------------------------------------------------     
-def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
+def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True, esn=""):
     eciddir = os.path.join("..", Admin.ECID)
     if not os.path.isdir(eciddir):
         os.mkdir(eciddir)
@@ -357,7 +364,7 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
         _logger.info(f"===== Les infos du fichier (BOLC) {filebolcimportbase} iront dans"
               f' tec.tech ({"PROD" if useprodapi else "TEST"}) =====')
         _logger.info(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
-        TransfertTectech(filebolcimport, useprodapi, Admin.iddonlot, Admin.idrecond, Admin.ECID)
+        TransfertTectech(filebolcimport, useprodapi, Admin.iddonlot, Admin.idrecond, Admin.ECID, Admin.credsfile, Admin.esn)
 
     if exitcode == "BOTH":
         # add the tectech CSV file to the ZIP archive
@@ -367,7 +374,7 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True):
 
     if exitcode in ["EMMAUS", "BOTH"]:
         _logger.info("=== Envoi des fichiers vers audits.emmaus-connect.org ===")
-        TransfertEmmaus(ZIPFILE, Admin.ECID)
+        TransfertEmmaus(ZIPFILE, Admin.ECID, esn)
         _logger.info("=== ...terminé ===")
 
 
@@ -601,7 +608,7 @@ def MakeBolc(infdic, filename):
 #===========================================================================================
 def BolcStatut():
 
-    ecid=Ecid().Get()
+    ecid = EqId().eqid
     liststatut = list(tectech_data.allowed_values["statut"])
     dialog=Zdialog("Changement du Status Bolc",5,5)
     vbox=dialog.area
@@ -642,7 +649,7 @@ def BolcStatut():
     with open(  filebolc , "w" ) as f:
         f.write( bolcdata )
 
-    TransfertTectech(filebolc)
+    TransfertTectech(filebolc, credsfile=Admin.credsfile)
 
 
 #===========================================================================================
@@ -746,52 +753,36 @@ class Caract:
         if dialog.exitcode == "SAVE":
             self.Save(out)
 
-#===========================================================
-# Gestion / saisie de l'identifiant ECID
-# Il est mémorisé dans un fichier local
-# 
-# Ecid().Get()  renvoie la valeur mémorisée
-#  - saisie si le fichier local n'existe pas  ( et dans ce cas crée le fichier local)
-#  - abort si on saisie une valeur vide#
-# Ecid().Init(value)  permet de mémoriser l'ECID s'il est a été passé en paramètres
-# Ecid().Reset()  détruit le fichier local
-#==========================================================
-class Ecid:
+# ===========================================================
+# Gestion de l'identifiant de l'équipement en cours d'audit
+# (va notamment servir à supprimer Ecid)
+# ==========================================================
 
-    def __init__(self):
-        self.idfile=os.path.join(TMPDISK,"-ecid.txt")
-        self.regexp=r"^[A-Z]{2}(PC|TA)[0-9]{2}-[0-9]{4}$"
+class EqId:
+    __is_initialized = False
+    __eqid: str = ""
 
-    def Save(self,value):
-        with open(self.idfile,"w") as f:
-            f.write(value)
+    def __init__(self, eqid: str = ""):
+        if EqId.__is_initialized:
+            return
+        EqId._init(eqid)
+        EqId.__is_initialized = True
 
-    def Get(self):
-        if os.path.isfile(self.idfile):
-            with open(self.idfile,"r") as f:
-                value=f.read()
-        else:
-            value=self.Input("")
-        return value
+    @staticmethod
+    def _init(eqid: str):
+        EqId.__eqid = eqid
 
-    def Init(self,value):
-        self.Input(value)
+    @staticmethod
+    def reset():
+        # the original Ecid class would remove the cache -ecid.txt file which we no longer maintain
+        # this method was only used in 'menu.py', not really our problem
+        # let's make the processing do what it announces and see what happens
+        EqId.__eqid = ""
+        __is_initialized = False
 
-    def Reset(self):
-        if os.path.isfile(self.idfile) :  os.remove(self.idfile)        
-
-    def Input(self, value: str):
-        while not re.match( self.regexp , value.upper()):
-            if value != "":
-                msg=f"IDENTIFIANT emmaus incorrect: {value}"
-            else:
-                msg=""
-            value=Zinputbox( "SAISIE IDENTIFIANT" , msg, "Entrer l'identifiant (exemple: GRPC25-9999) "  , value )
-            if value == "" : break
-
-        # if value == "" : sys.exit()
-        self.Save(value.upper())
-        return value.upper()
+    @property
+    def eqid(self):
+        return self.__eqid
 
 
 #------------------------------------------------------------------
@@ -847,12 +838,12 @@ def UpdateMe():
 # Procedure d'Audit
 #
 #==============================================================================
-def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: str=""):
-    _logger.debug(f"ProcessAudit({mini=}, {useprodapi=}, {xfer=}, {datestamp=})")
-    _logger.debug(f"ProcessAudit: Ecid=>{Ecid().Get()}<")
+def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: str="", esn: str=""):
+    _logger.debug(f"ProcessAudit({mini=}, {useprodapi=}, {xfer=}, {datestamp=}, {esn=})")
+    _logger.debug(f"ProcessAudit: eqid=>{EqId().eqid}<")
     # exitiftest()
 
-    Admin.ECID = Ecid().Get()
+    Admin.ECID = EqId().eqid
 
     # Audit du système et extraction des données
     _logger.info(f"Recherche des caractéristiques de l'équipement")
@@ -945,7 +936,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
 
     # Sasie des manuelle des informations
     time.sleep(1)  # Evite que l'affichage rapide arrive après la boite de dialogue
-    result=ManualAdminInfosIHM(infos, "Saisie des informations administratives")
+    result=ManualAdminInfosIHM(infos, f"Saisie des informations administratives pour {Admin.ECID}")
     # si on n'a pas cliqué OK, les informations saisies sont invalides, et peuvent provoquer bugs
     if result.get("OK","") == "" : return 
 
@@ -966,7 +957,7 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     else:
         datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    MakeSendFiles(infos, useprodapi, xfer)
+    MakeSendFiles(infos, useprodapi, xfer, esn)
 
 #--------------------------------------------------------------------
 # Demande de passwd sur Linux
@@ -1016,14 +1007,14 @@ def old_parsing() -> (bool, bool, bool):
     elif n_ == 1:
         _logger.debug("Un seul paramètre: soit un idEsn, soit PROD|TEST")
         if sys.argv[1].upper() not in prod_or_test_:  # [2]
-            Ecid().Init(sys.argv[1].upper())
+            EqId(sys.argv[1].upper())
             nopc = False
         else:  # [3]
             _logger.debug("Uniquement choix PROD|TEST")
             useprodapi = sys.argv[1].upper() == "PROD"
     elif n_ == 2:  # [4]
         _logger.debug("Deux paramètres ==> idEsn + PROD|TEST")
-        Ecid().Init(sys.argv[1].upper())
+        EqId(sys.argv[1].upper())
         nopc = False
         useprodapi = sys.argv[2].upper() == "PROD"
     else:
@@ -1034,7 +1025,7 @@ def old_parsing() -> (bool, bool, bool):
 
     return nopc, mini, useprodapi
 
-def print_version_info() -> None:
+def _print_version_info() -> None:
     print(f"{__about__.__title__}")
     print(f"Version: {__about__.__version__}")
     print("Développé par:")
@@ -1042,25 +1033,47 @@ def print_version_info() -> None:
         print(f"  {a['versions']}: {a['name']} ({a['email']})")
     print(f"Copyright: {__about__.__copyright__}")
 
-def check_idesn(val):
+def unused_check_idesn(val):
     __esnspat = "|".join(sorted(list(tectech_data.esn_to_idstock.keys())))
     __crexp = re.compile(fr'^(?P<esn>({__esnspat}))(?P<typ>(PC|TA))' + r'(?P<ann>(\d{2}))-(?P<num>(\d{4}))$', re.ASCII)
     m = re.match(__crexp, val.upper())
-    if not m:
+    if False and not m:
         raise argparse.ArgumentTypeError(f"{val} n'est pas un idEsn valide")
     return val
 
+def _check_esn(val):
+    if val.upper() not in ["", *ESNLIST]:
+        raise argparse.ArgumentTypeError(f"{val} n'est pas un ESN valide")
+    return val.upper()
+
+def _get_esn_from_file() -> str:
+    e = ""
+    cf = Admin.credsfile
+    try:
+        cf = os.path.realpath(os.path.normpath(cf))
+        with open(cf, 'r') as jfile:
+            e = json.load(jfile).get("esn", "").upper()
+    except:
+        pass
+    if e not in ["", *ESNLIST]:
+        _logger.error(f"La valeur d'esn \"{e}\" lue dans {cf} n'est pas valide")
+        e = ""
+    return e
+
 def exitiftest():
-    # sys.exit(0)
-    return
+    sys.exit(0)
+    # return
 
 
 if __name__ == '__main__':
 
-    if not [_ for _ in sys.argv if _.startswith('-')]:
+    # Tracer().set_main_level(logging.DEBUG)
+
+    if False and not [_ for _ in sys.argv if _.startswith('-')]:
         _logger.debug("Old-style parameter parsing")
         _logger.debug(f"{len(sys.argv)}, {sys.argv=}")
         nopc_, mini_, useprodapi_ = old_parsing()
+        _logger.info(f"{nopc_=}, {mini_=}, {useprodapi_=}")
         # exitiftest()
         ProcessAudit(mini=mini_, useprodapi=useprodapi_, datestamp=DATESTAMP)
 
@@ -1078,12 +1091,13 @@ if __name__ == '__main__':
         description_ += f"\nProgramme d'audit de PC Linux - {__about__.__version__}"
         description_ += "\n====================================="
 
-        epilog_ =  "\n=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
-        epilog_ += "\nL'ancien style de passage de paramètres est encore admis, mais en voie d'obsolescence."
-        epilog_ += "\nPour mémoire, voici quelques exemples de commandes valides:"
-        epilog_ += "\n  sudo bash audit.sh              # mini-audit: sans transferts"
-        epilog_ += "\n  sudo bash audit.sh GRPC26-0043  # audit normal: avec envoi vers les serveurs"
-
+        epilog_ = ""
+        # epilog_ =  "\n=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*"
+        # epilog_ += "\nL'ancien style de passage de paramètres est encore admis, mais en voie d'obsolescence."
+        # epilog_ += "\nPour mémoire, voici quelques exemples de commandes valides:"
+        # epilog_ += "\n  sudo bash audit.sh              # mini-audit: sans transferts"
+        # epilog_ += "\n  sudo bash audit.sh GRPC26-0043  # audit normal: avec envoi vers les serveurs"
+        #
         epilog_ += "\n======================================================================================"
 
         parser_ = argparse.ArgumentParser(description=description_, epilog=epilog_,
@@ -1092,14 +1106,18 @@ if __name__ == '__main__':
 
         ghelp_ = parser_.add_argument_group("Obtenir de l'aide")  # , "Audit puis transferts vers base d'audtis et tec.tech")
 
-        ghelp_.add_argument("-h", "--help", default=False, action='store_true',
+        ghelp_.add_argument("-h", "--help", default=False, action='help',
                              help="Afficher le message d'aide")
 
         gfull_ = parser_.add_argument_group("Usage standard", "Audit puis transferts vers base d'audits et tec.tech")
 
-        gfull_.add_argument("-i", "--idesn", type=check_idesn, required=False, metavar='eePCaa-nnnn',
-                             help="Identifiant ESN du PC à traiter" 
-                                  f"(ee dans {{{', '.join(sorted(list(tectech_data.esn_to_idstock.keys())))}}})")
+        gfull_.add_argument("-i", "--idpc", type=str, required=False, default="", metavar='IDPC',
+                             help="Identifiant du PC à traiter")
+
+        metav_ = 'EE'
+        gfull_.add_argument("-e", "--esn", type=_check_esn, default="", metavar=f"{metav_}",
+                            help="Digramme de l'ESN"
+                                 f" (optionnel, pris dans {{{', '.join(sorted(list(tectech_data.esn_to_idstock.keys())))}}})")
 
         gfull_.add_argument("-t", "--test", default=False, action='store_true',
                              help="Utiliser la base tec.tech de test (optionnel - base prod par défaut)")
@@ -1116,15 +1134,18 @@ if __name__ == '__main__':
 
         args_ = parser_.parse_args()
         nopc_ = False  # not very sure about this one...
-        _logger.debug(f"{args_=}")
+        _logger.info(f"{args_=}")
+
+        # _logger.info(f"{args_=}"); exitiftest()
 
         if args_.version:
-            print_version_info()
+            _print_version_info()
             sys.exit(0)
 
-        if args_.help:
-            parser_.print_help()
-            sys.exit(0)
+        if not args_.mini and not args_.idpc:
+            print("\nSi on ne choisit pas le mini-audit, il est obligatoire de préciser l'identifiant du PC "
+                  "au lancement\n")
+            sys.exit(1)
 
         if args_.mini:
             _logger.debug("Running mini-audit")
@@ -1132,9 +1153,15 @@ if __name__ == '__main__':
             ProcessAudit(mini=True, useprodapi=not args_.test, datestamp=DATESTAMP, xfer=False)
         else:
             _logger.debug("Running normal audit")
-            Ecid().Init(args_.idesn.upper())
+            if not args_.esn:
+                args_.esn = _get_esn_from_file()
+            else:
+                args_.esn = args_.esn.upper()
+            EqId(args_.idpc.upper())
             # exitiftest
-            ProcessAudit(mini=False, useprodapi=not args_.test, datestamp=DATESTAMP)
+            Admin.esn = args_.esn
+            _logger.debug(f"{Admin.esn=}")
+            ProcessAudit(mini=False, useprodapi=not args_.test, datestamp=DATESTAMP, esn=Admin.esn)
 
     sys.exit(0)
 

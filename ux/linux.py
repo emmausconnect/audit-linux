@@ -26,10 +26,19 @@ TMPSCANFILE=os.path.join( TMPDISK ,  FILESCAN)           # fichier d'export de l
 # infosdict={}  # donnees technique issues du scan systeme
 
 def SystemScan(inxifile):
-    result = subprocess.run(["sudo", "inxi", "-F", "-xx", "-y1", "--color", "0"], capture_output=True, text=False, check=False)
-    with open(f"{inxifile}", "wb") as f:
-        f.write(result.stdout)
-    pass
+    try:
+        result = subprocess.run(["sudo", "inxi", "-F", "-xx", "-y1", "--color", "0"],
+                                capture_output=True, text=False, check=False, timeout=5)
+    except subprocess.TimeoutExpired as exc:
+        # yes, I came across one case where call to 'inxi' never returned
+        _logger.warning(f"La commande 'inxi' a été interrompue car trop longue; ses données sont potentiellement incomplètes")
+        with open(f"{inxifile}", "wb") as f:
+            f.write(exc.stdout)
+        pass
+    else:
+        with open(f"{inxifile}", "wb") as f:
+            f.write(result.stdout)
+        pass
 
 #------------------------------------------
 # Execute l'audit technique : lancement du scan, decodage 

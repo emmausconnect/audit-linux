@@ -109,7 +109,8 @@ def GetRemoteVersionInfo() -> (str, str, str, int):
     return d['version'], d['final_filename'], d['download_url'], d['size']
 
 
-def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "", idmatrecond: str = "", ecid: str= ""):
+def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "", idmatrecond: str = "",
+                     ecid: str = "", credsfile: str = "", idesn: str = ""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
     _logger.info("=== Transfert à faire vers tec.tech ===")
@@ -122,7 +123,7 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
     tokfil = "token-test.json" if not useprodapi else "token-prod.json"
     _logger.info(f'fichier jeton: {tokfil}')
     try:
-        api = tectech.TecTAPI(useprodapi=useprodapi, credsfile="tectech-credentials.json", tokenfile=tokfil)
+        api = tectech.TecTAPI(useprodapi=useprodapi, credsfile=credsfile, tokenfile=tokfil)
     except Exception as exc:
         _logger.error(f"Impossible de créer l'objet tectech.TecTAPI ({exc})")
         sys.exit(1)
@@ -140,8 +141,10 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
     if mypc:  # mise à jour d'équipement
         _logger.info(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
         d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
-                                 idmaterielreconditionneur=mypc['idMaterielReconditionneur'])
+                                 idmaterielreconditionneur=mypc['idMaterielReconditionneur'], idesn=idesn)
         d['id'] = mypc['id']
+        _logger.debug(f"Restoring idEsn from {d['idEsn']} to {mypc['idEsn']} before updating tec.tech")
+        d['idEsn'] = mypc['idEsn']  # we no longer update idEsn as constraints on it have been lifted
         _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
 
         # ds = json.dumps([d]).encode('utf-8')
@@ -157,7 +160,7 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
             _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         _logger.info(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
-        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond)
+        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond, idesn=idesn)
         _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
         mynewpc = {}
         try:
@@ -181,11 +184,13 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
     return
 
 
-def TransfertEmmaus(zf, ecid):
+def TransfertEmmaus(zf, ecid, esn):
     xak = "0972dd465681b821e567d65f"
     desturl = "https://audits.emmaus-connect.org/api/upload/zip"
     cmd = ["curl", "-s", "-X", "POST", f"{desturl}", "-F", f"ecid={ecid}",
            "-F", f"actual_file=@{zf}", "-H", f"X-API-Key: {xak}"]
+    if esn:
+        cmd += ["-F", f"region={esn}"]
     result = subprocess.run(cmd, capture_output=True, text=True, env={**os.environ, "LC_ALL": "C"},
                             check=False)  # we don't really care if this particular transfer fails
     _logger.debug(f"result.stderr = {result.stderr}")

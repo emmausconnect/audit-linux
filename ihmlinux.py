@@ -17,7 +17,7 @@ except:
 
 gi.require_version("Gtk", "3.0")
 
-from gi.repository import Gtk,Gdk
+from gi.repository import Gtk, Gdk
 
 #========================== Boxes / Label sans id / value ========================
 
@@ -108,7 +108,7 @@ def Zhcell(grid,x,y,spacing=5,border=5):
 #
 # !!! default=True n'est pas opérationnel
 #---------------------------------------------------
-class Zbutton():
+class Zbutton:
 
     def __init__(self,owner,hostbox,id,title,color="grey",action=None,default=False):
         self.owner=owner
@@ -169,7 +169,7 @@ class Zbutton():
 # - si position = "up" le label est au dessus, sinon il est à gauche
 #
 #---------------------------------------------------
-class Zentry():
+class Zentry:
 
     def __init__(self,owner, hostbox,id,titre,position,initvalue="",focus=False):
         self.id=id
@@ -212,7 +212,7 @@ class Zentry():
 # Check button avec un label , et un contenu initial
 # Si initvalue != ""  le bouton est checké
 #---------------------------------------------------
-class Zcheck():
+class Zcheck:
 
     def __init__(self,owner, hostbox,id,titre,initvalue=""):
         self.id=id
@@ -249,7 +249,7 @@ class Zcheck():
 # (permet de tous leur mettre result[group] comme valeur initiale)
 #
 #---------------------------------------------------
-class Zradio():
+class Zradio:
 
     def __init__(self,owner, hostbox,id,titre,initvalue,group):
         self.id=id
@@ -296,7 +296,7 @@ class Zradio():
 #
 # Sa valeur est le texte sélectionné
 #---------------------------------------------------
-class Zlistbox( ):
+class Zlistbox:
 
     def __init__(self,owner,hostbox, id,title,items,initvalue=""):
 
@@ -363,7 +363,7 @@ class Zlistbox( ):
 #
 # Si belongsto est une Zdialog , alors la boite est modeless
 #================================================================
-class Zdialog():
+class Zdialog:
 
     #--------------------------------------------------------------------------
     # Initilisation
