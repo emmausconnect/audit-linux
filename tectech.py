@@ -443,7 +443,7 @@ class TecTAPI:
         return ret.strip()
 
     @classmethod
-    def update_equipment(cls, mat: dict) -> dict:
+    def update_equipment(cls, mat: dict) -> list:
         # This method updates an EXISTING equipment:
         #   -"mat" must contain at least an idEsn
         #   -it also contains the <field, value> pairs that must be updated on the server side
@@ -510,7 +510,7 @@ class TecTAPI:
 
 
     @classmethod
-    def create_equipment(cls, mat: dict) -> dict:
+    def create_equipment(cls, mat: dict) -> list:
         # This method creates an equipment item.
         # The following fields are mandatory:
         #    "typeMateriel": "ORDINATEUR_PORTABLE",        # mandatory by tec.tech docs

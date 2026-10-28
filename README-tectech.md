@@ -1,3 +1,33 @@
+---
+title: README-tectech
+header-includes:
+  - |
+    <!-- Use this comand to generate the PDF file -->
+    <!-- pandoc README-tectech.md -o README-tectech.md.pdf --pdf-engine=weasyprint -->
+    <style>
+      @page {
+        size: A4;
+        margin-top: 2cm;
+        margin-bottom: 2cm;
+        margin-left: 1.5cm;
+        margin-right: 1.5cm;
+      }
+
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none !important;
+        width: auto !important;
+        font-size: 10pt;
+      }
+
+    h1 { font-size: 16pt; }
+    h2 { font-size: 14pt; }
+    h3 { font-size: 12pt; }
+    h4 { font-size: 10pt; }
+    </style>
+---
+
 # audit-linux (adapté pour tec.tech)
 
 Cet outil est la version de l'audit Linux jadis développé par Bernard Maison, qui fonctionnait avec le BOLC et qui a été adapté pour permettre l'envoi des données d'audit vers tec.tech au lieu du BOLC.
@@ -46,24 +76,26 @@ Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pa
 ## Première utilisation
 
 - se positionner dans le bon répertoire
-    ```commandline
+```
     cd audit-linux.x.y.z
-    ```
+```
 
 - y créer un fichier nommé `tectech-credentials.json` avec votre éditeur favori et y placer les données suivantes:
-    ```commandline
+```
     {
         "client_id":     " *valeur à demander à l'équipe tec.tech* ",
         "client_secret": " *valeur à demander à l'équipe tec.tech* ",
         "esn": " *une valeur parmi 'BX', 'CR', 'GR', 'LI', 'LV', 'LY', 'MA', 'MB', 'RO', 'SD', 'ST', 'VI'* "
     }
-    ```
+```
 en respectant scrupuleusement la syntaxe (notamment la casse, les guillemets et la virgule en fin des lignes `client_id` et `client_secret`)
 
 Les valeurs de `client_id` et de `client_secret` sont propres à chaque ESN et doivent être obtenues auprès de l'équipe tec.tech.
 
 La valeur de `esn` sert à deux choses:
+
 - dans le cas d'une création de matériel, déterminer le stock de destination dans tec.tech,
+
 - déterminer le répertoire de destination des données d'audit dans la base des audits (indépendante de tec.tech).
 
 La valeur de `esn` éventuellement passée en paramètre de la ligne de commande supplante celle qui se trouve dans `tectech-credentials.json`.
@@ -95,7 +127,7 @@ bash audit.sh -i IdentifiantPC --test
 Lors de l'audit, si l'équipement existe déjà dans tec.tech, l'outil le met à jour, sinon, il le crée, le tout avec les données collectées lors de l'audit.
 
 ## Modification d'un matériel existant v/s création d'un nouveau matériel
-L'outil d'audit ne sait faire des recherches qu'avec l'identifiant qu'on lui donne en paramètre (`IdentifiantPC` est pris ici comme exemple) ou bien le numéro de série du matériel, tel qu'extrait par l'outil lui-même.
+L'outil d'audit ne sait faire des recherches qu'avec l'identifiant qu'on lui donne en paramètre (`IdentifiantPC` est pris ici comme exemple).
 
 De ma compréhension actuelle de tec.tech, pour un PC:
 
@@ -104,7 +136,7 @@ De ma compréhension actuelle de tec.tech, pour un PC:
 
 Dans tous les cas, pour tec.tech, `idEsn` est un champ libre, que certains ESN utilisent comme identifiant unique. Autrement dit, `idEsn` est une valeur conforme à la syntaxe *eePCaa&#x2011;nnnn* et unique dans tec.tech, alors que pour tec.tech, ce champ n'est nullement contraint.
 
-Dans notre exemple, l'outil d'audit cherche le PC d'abord par `idEsn=IdentifiantPC` puis, en cas d'échec, par `idMaterielReconditionneur=IdentifiantPC` et enfin, en cas d'échec, par son *numéro de série*:
+Dans notre exemple, l'outil d'audit cherche le PC d'abord par `idEsn=IdentifiantPC` puis, en cas d'échec, par `idMaterielReconditionneur=IdentifiantPC`:
 
 - s'il trouve, tout va bien: il s'agit de la modification d'un équipement déjà déclaré dans tec.tech,
 
@@ -114,7 +146,9 @@ Dans notre exemple, l'outil d'audit cherche le PC d'abord par `idEsn=Identifiant
 
 Ça marche très bien si les PC ont été déclarés par leur `idEsn` dans tec.tech avant de les mettre entre les mains des bénévoles pour l'audit.
 
-Ça marche aussi pour des PC reconditionnés par un pro, qui ont été déclarés dans tec.tech avec un `idMaterielReconditionneur` (au format propre au pro) et un `numeroSerie`, et pour lesquels `idEsn` n'a pas encore été renseigné.
+Ça marche aussi pour des PC reconditionnés par un pro, qui ont été déclarés dans tec.tech avec un `idMaterielReconditionneur` (au format propre au pro) et pour lesquels `idEsn` n'a pas encore été renseigné.
+
+> **cas particulier**: si le PC en cours d'audit est trouvé dans tec.tech avec un `numeroSerie` non-vide et différent de celui "lu" par le programme dans le matériel en cours d'audit alors les informations de tec.tech ne sont pas mises à jour
 
 Ça marche assez bien si le référent déclare au moins le lot. Comme vu ci-dessus, l'outil d'audit sait créer des matériels dans tec.tech à partir des deux infos: `idLot` et `IdentifiantPC`.
 
@@ -124,7 +158,9 @@ Pour mémoire, les `idEsn` des PC doivent se conformer au modèle:
 ```
 
 Lors d'une création de matériel:
+
 - `idMaterielReconditionneur` prend la valeur `IdentifiantPC`
+
 - si `idEsn` est conforme à la syntaxe décrite ci-dessus, alors il prend aussi la valeur `IdentifiantPC`, sinon il reste vide
 
 De façon générale, à ma connaissance, la notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, à l'heure où j'écris, il existe dans tec.tech plusieurs dizaines de cas où des matériels différents (*ID* différents) ont les mêmes `idMaterielReconditionneur+numeroSerie`…

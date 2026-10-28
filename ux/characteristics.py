@@ -130,7 +130,7 @@ def _get_platform_info(fil: str, testmode: bool = False) -> infosDict:
 def _get_disk_info(fil: str, testmode: bool = False) -> infosDict:
 
     def disk_type(dinf: dict[str, str | int]) -> str:
-        return 'HDD' if dinf['rota'] else 'NVME' if dinf['tran'] == 'nvme' else 'SSD'
+        return 'MMC' if dinf['tran'] == 'mmc' else 'HDD' if dinf['rota'] else 'NVME' if dinf['tran'] == 'nvme' else 'SSD'
 
     def disk_size(dinf: dict[str, str | int]) -> int:
         return int(dinf['size'] / GB)
@@ -155,8 +155,8 @@ def _get_disk_info(fil: str, testmode: bool = False) -> infosDict:
     ##       +"sata" for SATA
     ##       +"nvme" for NVMe
 
-    # keep only 'sata' and 'nvme' devices
-    bdevs = [_ for _ in bdevs if _['type'] == 'disk' and _['tran'] in {"ata", "sata", "nvme"}]
+    # keep only '(s)ata', 'mmc' and 'nvme' devices
+    bdevs = [_ for _ in bdevs if _['type'] == 'disk' and _['tran'] in {"ata", "sata", "nvme", "mmc"}]
     retd: infosDict = {"DisqueTaille": 0, "DisqueRef": "", "DisqueID": "", "DisqueType": ""}
     snmaindisk = "inconnu"
 
@@ -212,12 +212,17 @@ def _get_battery_health() -> str:
     try:
         out = subprocess.check_output(["inxi", "-Bcy1"], text=True)
         # out = "Battery:\n  ID-1: BAT0\n    charge: 22.5 Wh (94.1%)\n    condition: 23.9/23.9 Wh (100.0%)\n"
+        # Test mutliple-battery case using:
+        # with open("inxi-multibat.txt", 'r') as tf:
+        #     out = ''.join(tf.readlines())
         out = out.split('\n')
         _logger.debug(f"Recherche de l'indice de santé de la batterie dans {out}")
         condl = [l for l in out if "condition" in l]
-        if not condl or len(condl) > 1:
+        if not condl:
             return ""
-        condl = condl[0].strip()
+        if len(condl) > 1:
+            _logger.debug(f"{len(condl)} batteries \"détectées\" {out}")
+        condl = condl[0].strip()  # the main battery is usually the first one to appear in the list
         # condl looks like 'condition: 23.9/23.9 Wh (100.0%)'
         m = re.match(r'.*\((?P<healthpercentage>(.*%))\)$', condl)
         if not m:
@@ -261,6 +266,9 @@ def get_machine_infos(datestamp: str) -> infosDict:
 
 if __name__ == "__main__":
     Tracer().set_main_level(logging.DEBUG)
+    bat_ = _get_battery_health()
+    tfil = "acer-aspire_a114-31/lsblk-20260914.202435.json"
+    dinfos_ = _get_disk_info(tfil, True)
     tfil = "GRPC26-0045/lshw-20260515.170911.json"
     hinfos_ = _get_platform_info(tfil, testmode=True)
     # infos_ = get_machine_infos("19610306.103088")

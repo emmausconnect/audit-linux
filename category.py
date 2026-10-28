@@ -5,9 +5,9 @@ import urllib.request, urllib.error
 from trace import Tracer
 _logger = Tracer().get_logger()
 
-type thresholdTable = tuple[list[tuple[int, int | str]], int]
+# type thresholdTable = tuple[list[tuple[int, int]], int]
 
-def _make_lookup(threshold_table: thresholdTable):
+def _make_lookup(threshold_table: tuple[list[tuple[int, int]], int]):
     def lookup(val):
         ll = threshold_table[0]
         if val < ll[0][0]:
@@ -24,10 +24,10 @@ def _make_lookup(threshold_table: thresholdTable):
         # return threshold_table[1]
     return lookup
 
-_ramTable: thresholdTable = ([(4, 0), (5, 1), (8, 2), (16, 3)], 4)
-_ssdTable: thresholdTable = ([(64, 0), (128, 1), (200, 2), (500, 3)], 4)
-_hddTable: thresholdTable = ([(160, 0), (256, 1), (1000, 2)], 3)
-_cpuTable: thresholdTable = ([(2000, 0), (3500, 1), (5000, 2), (7000, 3)], 4)
+_ramTable: tuple[list[tuple[int, int]], int] = ([(4, 0), (5, 1), (8, 2), (16, 3)], 4)
+_ssdTable: tuple[list[tuple[int, int]], int] = ([(64, 0), (128, 1), (200, 2), (500, 3)], 4)
+_hddTable: tuple[list[tuple[int, int]], int] = ([(160, 0), (256, 1), (1000, 2)], 3)
+_cpuTable: tuple[list[tuple[int, int]], int] = ([(2000, 0), (3500, 1), (5000, 2), (7000, 3)], 4)
 _ram_mark_lookup = _make_lookup(_ramTable)
 _ssd_mark_lookup = _make_lookup(_ssdTable)
 _hdd_mark_lookup = _make_lookup(_hddTable)
@@ -67,7 +67,7 @@ def compute_category(cpumark: int, ramsiz: int, dsksiz: int, dsktyp: str) -> tup
 
     ncpu = _cpu_mark_lookup(cpumark)
     nram = _ram_mark_lookup(ramsiz)
-    if dsktyp == "HDD":
+    if dsktyp in ["HDD", "MMC"]:
         ndsk = _hdd_mark_lookup(dsksiz)
     else:
         ndsk = _ssd_mark_lookup(dsksiz)
@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
     def isintstr(s: str) -> bool:
         try:
-            i = int(s)
+            int(s)
         except ValueError:
             return False
         else:
@@ -278,6 +278,6 @@ if __name__ == "__main__":
             go_for(writer_, vrowsHDD_, "HDD")
 
 
-    c, r, d, t = 6100, 8, 256, "SSDNVME"
-    myc, myr, myd, myntot, mycat, mydet = compute_category(c, r, d, t)
+    c_, r_, d_, t_ = 6100, 8, 256, "SSDNVME"
+    myc_, myr_, myd_, myntot_, mycat_, mydet_ = compute_category(c_, r_, d_, t_)
     sys.exit(0)

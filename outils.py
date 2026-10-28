@@ -110,7 +110,7 @@ def GetRemoteVersionInfo() -> (str, str, str, int):
 
 
 def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "", idmatrecond: str = "",
-                     ecid: str = "", credsfile: str = "", idesn: str = ""):
+                     ecid: str = "", credsfile: str = "", idesn: str = "", datestamp: str=""):
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
     _logger.info("=== Transfert à faire vers tec.tech ===")
@@ -138,10 +138,12 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
         _logger.error(f"Erreur lors de la recherche de {vals[2]}/{vals[14]} ({exc})")
         sys.exit(1)
 
+    mynewpc = []
     if mypc:  # mise à jour d'équipement
         _logger.info(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
         d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
-                                 idmaterielreconditionneur=mypc['idMaterielReconditionneur'], idesn=idesn)
+                                 idmaterielreconditionneur=mypc['idMaterielReconditionneur'], idesn=idesn,
+                                 datestamp=datestamp)
         d['id'] = mypc['id']
         _logger.debug(f"Restoring idEsn from {d['idEsn']} to {mypc['idEsn']} before updating tec.tech")
         d['idEsn'] = mypc['idEsn']  # we no longer update idEsn as constraints on it have been lifted
@@ -149,20 +151,23 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
 
         # ds = json.dumps([d]).encode('utf-8')
         # _logger.info(f"Le même encodé juste avant XPUT\n{ds}")
-
-        mynewpc = {}
-        try:
-            # _logger.info("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
-            mynewpc = api.update_equipment(d)
-        except Exception as exc:
-            _logger.error(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+        if mypc['numeroSerie'] and mypc['numeroSerie'] != d['numeroSerie']:
+            _logger.error(f"Le matériel à modifier dans tec.tech a déjà un numéro de série ({mypc['numeroSerie']})"
+                          f" qui est différent de celui du matériel en cours d'audit ({d['numeroSerie']})."
+                          f"Abandon de la mise à jour dans tectech.")
         else:
-            _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
+            try:
+                # _logger.info("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+                mynewpc = api.update_equipment(d)
+            except Exception as exc:
+                _logger.error(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+            else:
+                _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
     else:  # création d'un nouvel équipement
         _logger.info(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
-        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond, idesn=idesn)
+        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond, idesn=idesn,
+                                 datestamp=datestamp)
         _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
-        mynewpc = {}
         try:
             # _logger.info("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
             mynewpc = api.create_equipment(d)
@@ -171,16 +176,18 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
         else:
             _logger.info(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
 
-    # we trustfully use the existing naming scheme...
-    dest = os.path.join("..", ecid, f"{ecid}.tect.csv")
-    try:
-        api.create_tectech_csvfile(mynewpc[0], dest)
-    except Exception as exc:
-        _logger.error(f"La création de {dest} a échoué ({exc})")
-    # else:
-    #     _logger.info(f"{dest} aurait dû être créé...")
+    if mynewpc:
+        # we trustfully use the existing naming scheme...
+        dest = os.path.join("..", ecid, f"{ecid}.tect.csv")
+        try:
+            api.create_tectech_csvfile(mynewpc[0], dest)
+        except Exception as exc:
+            _logger.error(f"La création de {dest} a échoué ({exc})")
+        # else:
+        #     _logger.info(f"{dest} aurait dû être créé...")
 
     _logger.info("=== Transfert vers tec.tec terminé ===")
+
     return
 
 

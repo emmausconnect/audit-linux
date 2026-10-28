@@ -95,6 +95,7 @@ class Admin:
 
     credsfile = CREDSFILE
     esn = ""
+    datestamp = DATESTAMP
 
 
 def DataSave(somedir, file, data):
@@ -364,13 +365,15 @@ def MakeSendFiles(infdic, useprodapi: bool = False, xfer=True, esn=""):
         _logger.info(f"===== Les infos du fichier (BOLC) {filebolcimportbase} iront dans"
               f' tec.tech ({"PROD" if useprodapi else "TEST"}) =====')
         _logger.info(f"Admin.iddonlot: {Admin.iddonlot}, Admin.idrecond: {Admin.idrecond}")
-        TransfertTectech(filebolcimport, useprodapi, Admin.iddonlot, Admin.idrecond, Admin.ECID, Admin.credsfile, Admin.esn)
+        TransfertTectech(filebolcimport, useprodapi, Admin.iddonlot, Admin.idrecond, Admin.ECID, Admin.credsfile,
+                         Admin.esn, Admin.datestamp)
 
     if exitcode == "BOTH":
         # add the tectech CSV file to the ZIP archive
         dest = os.path.join("..", Admin.ECID, f"{Admin.ECID}.tect.csv")
-        with zipfile.ZipFile(ZIPFILE, mode='a') as z:
-            z.write(dest, os.path.basename(dest))
+        if os.path.isfile(dest):
+            with zipfile.ZipFile(ZIPFILE, mode='a') as z:
+                z.write(dest, os.path.basename(dest))
 
     if exitcode in ["EMMAUS", "BOTH"]:
         _logger.info("=== Envoi des fichiers vers audits.emmaus-connect.org ===")
@@ -901,8 +904,9 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
     _logger.info(f"Categorie={Admin.categorie}")
 
     try:
-        if infos["DisqueType"] == "HDD":
-            newcatdsktyp = "HDD"
+        # must do something about 'MMC' here: treat it like an HDD?
+        if infos["DisqueType"] in ["HDD", "MMC"]:
+            newcatdsktyp = infos["DisqueType"]
         else:
             newcatdsktyp = "SSDNVME" if infos.get("NVME") == "oui" else "SSDATA"
         newcatc, newcatr, newcatd, newcatntot, newcatcat, newcatdet = category.compute_category(
@@ -912,19 +916,21 @@ def ProcessAudit(mini=False, useprodapi: bool = False, xfer=False, datestamp: st
         _logger.warning(f"Erreur lors du calcul de la nouvelle catégorie: {newcatexc}")
     else:
         _logger.info(f"Nouveau calcul: note={newcatntot}, catégorie={newcatcat}, Détails: '{newcatdet}'")
-        if newcatntot != Admin.notenet or newcatcat != Admin.categorie:
-            _logger.warning(f"...différence détectée! veuillez signaler au mainteneur")
-            td = {
-                "date": DATESTAMP, "version": __version__,
-                "cpumark": int(infos["CPUMARK"]), "ram": int(infos["RAM"]), "disqueTaille": int(infos["DisqueTaille"]),
-                "newcatdsktyp": newcatdsktyp, "newcatc": newcatc, "newcatr": newcatr, "newcatd": newcatd,
-                "newcatntot": newcatntot, "newcatcat": newcatcat, "newcatdet": newcatdet,
-                "oldnotenet": Admin.notenet, "oldcategorie": Admin.categorie, "oldtxtnotes": ", ".join(Admin.txtnotes)
-            }
-            tds = json.dumps(td) + '\n'
-            category.add_data_to_remote_logfile(CATEGORIZATIONLOGFILE, tds)
-        else:
-            _logger.info("...pas de différence")
+        # if newcatntot != Admin.notenet or newcatcat != Admin.categorie:
+        #     _logger.warning(f"...différence détectée! veuillez signaler au mainteneur")
+        td = {
+            "date": DATESTAMP, "version": __version__, "esn": Admin.esn, "idPC": Admin.ECID,
+            "diag": "CATEG" if newcatcat != Admin.categorie else "MARK" if newcatntot != Admin.notenet else "OK",
+            "characteristics": {"cpumark": int(infos["CPUMARK"]), "ram": int(infos["RAM"]),
+                                "disqueTaille": int(infos["DisqueTaille"])},
+            "newcalc": {"dsktyp": newcatdsktyp, "c": newcatc, "r": newcatr, "d": newcatd, "tot": newcatntot,
+                        "cat": newcatcat, "det": newcatdet},
+            "oldcalc": {"notenet": Admin.notenet, "categorie": Admin.categorie, "txtnotes": ", ".join(Admin.txtnotes)}
+        }
+        tds = json.dumps(td, ensure_ascii=False) + '\n'
+        category.add_data_to_remote_logfile(CATEGORIZATIONLOGFILE, tds)
+        # else:
+        #     _logger.info("...pas de différence")
 
     #------------------- affichage rapide ------------------------
     filename=os.path.join( TMPDISK , "infos.txt")
@@ -1087,6 +1093,16 @@ if __name__ == '__main__':
             pass
 
 
+        class myArgumentParser(argparse.ArgumentParser):
+            def error(self, message):
+                if message.startswith("unrecognized arguments:"):
+                    self.exit(2, f"Paramètres non reconnus:\n"
+                                 f"  {message[len('unrecognized arguments:'):].strip()}\n"
+                                 "Usage le plus courant:\n"
+                                 "  bash audit.sh -i IDPC\n")
+                super().error(message)
+
+
         description_ = "\n====================================="
         description_ += f"\nProgramme d'audit de PC Linux - {__about__.__version__}"
         description_ += "\n====================================="
@@ -1100,9 +1116,8 @@ if __name__ == '__main__':
         #
         epilog_ += "\n======================================================================================"
 
-        parser_ = argparse.ArgumentParser(description=description_, epilog=epilog_,
-                                          add_help=False, usage=argparse.SUPPRESS,
-                                          formatter_class=MyFormatter)
+        parser_ = myArgumentParser(description=description_, epilog=epilog_, add_help=False, usage=argparse.SUPPRESS,
+                                   formatter_class=MyFormatter)
 
         ghelp_ = parser_.add_argument_group("Obtenir de l'aide")  # , "Audit puis transferts vers base d'audtis et tec.tech")
 

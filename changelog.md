@@ -1,4 +1,3 @@
-# Version actuelle
 ## Si vous utilisez cet outil pour la première fois…
 
 - l'outil peut être téléchargé depuis le site [audits.emmaus-connect.org](https://audits.emmaus-connect.org/api/apps/linux/web) sous la forme d'un fichier ```linux-x.y.z.tgz```
@@ -24,6 +23,35 @@ bash audit.sh -m
 bash audit.sh -h
 ```
 
+# Version actuelle
+
+## 5.1.0
+
+- **changement important**: `numeroSerie` n'est plus utilisé comme clé de recherche dans tec.tech; donc l'`identifiantPC` passé en paramètre au programme d'audit sera recherché comme `idEsn` ou comme `idMaterielReconditionneur`; s'il n'est pas trouvé, la recherche s'arrête
+
+- si le PC en cours d'audit est trouvé dans tec.tech, et si son `numeroSerie` est non-vide et différent de celui "lu" par le programme dans le HW en cours d'audit alors les informations de tec.tech ne sont pas mises à jour
+
+- les disques de type MMC sont désormais reconnus et traités comme des HDD pour la catégorisation (en attendant que le document spécifiant la catégorisation soit mis à jour)
+
+- pour les PC qui ont plusieurs batteries (c'est le cas des 2-en-1, PC+tablette, comme le "Toshiba Z20t"), on rapporte l'état de la batterie principale
+
+
+## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
+
+Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
+
+Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
+```
+[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
+```
+Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
+```
+/tmp/lshw-20260406.112818.json
+/tmp/lsblk-20260406.112818.json
+```
+Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pas à un rédémarrage du PC.
+
+# Versions antérieures
 ## 5.0.0
 
 Cette version introduit des **changements importants**:
@@ -45,23 +73,6 @@ Cette version introduit des **changements importants**:
     bash audit.sh -i identifiant_quelconque
     ```
 
-
-## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
-
-Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
-
-Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
-```
-[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
-```
-Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
-```
-/tmp/lshw-20260406.112818.json
-/tmp/lsblk-20260406.112818.json
-```
-Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pas à un rédémarrage du PC.
-
-# Versions antérieures
 ## 4.4.1
 
 Cette version corrige quelques défauts mineurs:
@@ -76,21 +87,7 @@ Cette version corrige quelques défauts mineurs:
 
 Cette version devrait être la dernière de la lignée ```4.x.y```. En effet, il est prévu que **la prochaine version (```5.x.y```) introduise un changement majeur**: l'utilisation de l'```idEsn``` ne sera plus obligatoire. 
 
-## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
 
-Pour des questions générales ou des suggestions, vous pouvez utiliser [l'espace GoogleChat dédié à cet outil](https://chat.google.com/room/AAQA-458onA?cls=7).
-
-Si vous constatez une anomalie, vous pouvez, soit m'envoyer un mail, soit utiliser [l'espace GoogleChat](https://chat.google.com/room/AAQA-458onA?cls=7). Merci de bien vouloir joindre à votre signalement le fichier de trace créé à chaque exécution depuis la ```4.3.0```. Le nom complet de ce fichier est affiché dans les toutes premières lignes de la console; par exemple:
-```
-[INFO]: Nom du fichier de trace: /tmp/audit-linux-journal-20260406.112818.txt
-```
-Dans certains cas, il peut aussi être intéressant de joindre les fichiers suivants portant la même horodate que que le fichier de trace:
-```
-/tmp/lshw-20260406.112818.txt
-/tmp/lsblk-20260406.112818.txt
-```
-
-# Versions antérieures
 ## 4.4.0
 
 - le bug (signalé par Philippe P.) qui bloquait la création d'un matériel en l'absence d'un idMaterielReconditionneur est corrigé: dans un tel cas on force sa valeur à celle de idEsn
@@ -193,9 +190,11 @@ Je considère cette version comme *expérimentale* bien que je l'aie testée du 
 
 - le README a été enrichi d'un nouveau paragraphe et amélioré pour l'existant
 
+
 ## 3.2.1
 
 - j'ai corrigé un bug signalé par Éric D. (et relatif aux "marques")
+ 
 
 ## 3.2.0
 
@@ -205,9 +204,11 @@ Je considère cette version comme *expérimentale* bien que je l'aie testée du 
 
 - la version de la distribution Linux est ajoutée au champ "commentaire" (demande de Philippe R.)
 
+
 ## 3.1.1
 
 - j'ai corrigé un bug signalé par Éric D.
+
 
 ## 3.1.0
 
@@ -221,11 +222,13 @@ Je considère cette version comme *expérimentale* bien que je l'aie testée du 
 
 - on ne met plus sur le bureau que ```DecouverteMonPC-Linux/*``` et ```LeControleParental.pdf```
 
+
 ## 3.0.4
 
 Bug corrigé:
 
 - l'indication de présence d'une wecbcam est maintenant correctement gérée
+
 
 ## 3.0.2
 
