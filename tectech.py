@@ -364,7 +364,8 @@ class TecTAPI:
 
     @classmethod
     def lookup_equipment(cls, idesn: str, numeroserie: str="") -> dict:
-        _logger.info(f"Recherche de l'équipement {idesn=}, {numeroserie=}")
+        strforlogging = f"{idesn}" + (f"/{numeroserie}" if numeroserie else "")
+        _logger.info(f"Recherche de l'équipement {strforlogging}")
         # look for a "materiel" in tec.tech, based only on idEsn and numeroSerie
         if idesn:
             epmateriel = "materiel"
@@ -397,11 +398,11 @@ class TecTAPI:
                 raise TecTapiDuplicateEquipmentFound(errmsg)
 
             if nb == 1:
-                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idEsn")
+                _logger.info(f"L'équipement {strforlogging} a été trouvé par son idEsn")
                 return d['data'][0]
 
             # nb is certainly 0!
-            _logger.warning(f"La recherche de {idesn}/{numeroserie} par idEsn a échoué")
+            _logger.warning(f"La recherche de {strforlogging} par idEsn a échoué")
 
             # try to look the equipment up based on idMaterielReconditionneur
             try:
@@ -410,12 +411,13 @@ class TecTAPI:
                 raise TecTapiEquipmentNotFound from exc
 
             if d:
-                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son idMaterielReconditionneur")
+                _logger.info(f"L'équipement {strforlogging} a été trouvé par son idMaterielReconditionneur")
                 return d
 
-            _logger.warning(f"La recherche de {idesn}/{numeroserie} par idMaterielReconditionneur a échoué")
+            _logger.warning(f"La recherche de {strforlogging} par idMaterielReconditionneur a échoué")
 
         if not numeroserie:
+            _logger.warning("Recherche par numeroSerie non requise")
             return {}
 
         # tenter une recherche sur numeroSerie
@@ -425,9 +427,9 @@ class TecTAPI:
             raise TecTapiEquipmentNotFound from exc
         else:
             if d:
-                _logger.info(f"L'équipement {idesn}/{numeroserie} a été trouvé par son numeroSerie")
+                _logger.info(f"L'équipement {strforlogging} a été trouvé par son numeroSerie")
             else:
-                _logger.warning(f"La recherche de {idesn}/{numeroserie} par numeroSerie a échoué")
+                _logger.warning(f"La recherche de {strforlogging} par numeroSerie a échoué")
             return d
 
 

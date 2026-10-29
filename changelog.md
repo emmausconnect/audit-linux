@@ -25,6 +25,13 @@ bash audit.sh -h
 
 # Version actuelle
 
+## 5.1.1
+
+- j'ai intégré la non-recherche sur `numeroSerie` (que j'avais oubliée dans la `5.1.0`!)
+
+- les messages affichés dans la console sont plus lisibles, notamment pour les données échangées avec tec.tech
+
+
 ## 5.1.0
 
 - **changement important**: `numeroSerie` n'est plus utilisé comme clé de recherche dans tec.tech; donc l'`identifiantPC` passé en paramètre au programme d'audit sera recherché comme `idEsn` ou comme `idMaterielReconditionneur`; s'il n'est pas trouvé, la recherche s'arrête

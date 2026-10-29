@@ -47,7 +47,7 @@ def Editor(file):
     os.system(cmd)
 
 
-def MakeZip( zipname, files ):
+def MakeZip(zipname, files: list[str]):
     with zipfile.ZipFile( zipname , 'w') as z:
         for filename in files:
             base=os.path.basename(filename)
@@ -86,7 +86,7 @@ def DownloadFile(url: str, afile: str, siz: int) -> str:
     return "SUCCESS"
 
 
-def GetRemoteVersionInfo() -> (str, str, str, int):
+def GetRemoteVersionInfo() -> tuple[str, str, str, int]:
     defret = "", "", "", 0
     vinfourl = f"{ECAPPSAPIURL}/apps/linux/latest"
     headers = {
@@ -111,6 +111,11 @@ def GetRemoteVersionInfo() -> (str, str, str, int):
 
 def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "", idmatrecond: str = "",
                      ecid: str = "", credsfile: str = "", idesn: str = "", datestamp: str=""):
+    def dict2log(dd: dict) -> str:
+        if not dd:
+            dd = {}
+        return json.dumps(dd, ensure_ascii=False, indent=2)
+
     # we chose the easiest possible implementation: take the file destined to BOLC and convert it to something suitable
     # for tectech
     _logger.info("=== Transfert à faire vers tec.tech ===")
@@ -133,21 +138,21 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
     _logger.info(f'se périme le : {api.tokenexpirytimestr}')
 
     try:
-        mypc = api.lookup_equipment(vals[2], vals[14])
+        mypc = api.lookup_equipment(idesn=vals[2], numeroserie="")
     except Exception as exc:
-        _logger.error(f"Erreur lors de la recherche de {vals[2]}/{vals[14]} ({exc})")
+        _logger.error(f"Erreur lors de la recherche de {vals[2]} ({exc})")
         sys.exit(1)
 
     mynewpc = []
     if mypc:  # mise à jour d'équipement
-        _logger.info(f"Équipement {vals[2]}/{vals[14]} trouvé:\n{mypc}")
+        _logger.info(f"Équipement {vals[2]} trouvé:\n{dict2log(mypc)}")
         d = from_bolc_to_tectech(vals, idlot=mypc['idLot'], idstock=mypc['idStock'],
                                  idmaterielreconditionneur=mypc['idMaterielReconditionneur'], idesn=idesn,
                                  datestamp=datestamp)
         d['id'] = mypc['id']
         _logger.debug(f"Restoring idEsn from {d['idEsn']} to {mypc['idEsn']} before updating tec.tech")
         d['idEsn'] = mypc['idEsn']  # we no longer update idEsn as constraints on it have been lifted
-        _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
+        _logger.info(f"Dictionnaire à envoyer à tec.tech\n{dict2log(d)}")
 
         # ds = json.dumps([d]).encode('utf-8')
         # _logger.info(f"Le même encodé juste avant XPUT\n{ds}")
@@ -160,21 +165,24 @@ def TransfertTectech(filebolcimport="", useprodapi: bool = False, idlot: str = "
                 # _logger.info("Modification d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
                 mynewpc = api.update_equipment(d)
             except Exception as exc:
-                _logger.error(f"La mise à jour de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+                _logger.error(f"La mise à jour de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
             else:
-                _logger.info(f"Nouvel état de l'équipement {vals[2]}/{vals[14]} dans tec.tech:\n{mynewpc[0]}")
-    else:  # création d'un nouvel équipement
-        _logger.info(f"L'équipement {vals[2]}/{vals[14]} n'a pas été trouvé: il va être créé...")
-        d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond, idesn=idesn,
-                                 datestamp=datestamp)
-        _logger.info(f"Dictionnaire à envoyer à tec.tech\n{d}")
-        try:
-            # _logger.info("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
-            mynewpc = api.create_equipment(d)
-        except Exception as exc:
-            _logger.error(f"La création de l'équipement {vals[2]}/{vals[14]} dans tec.tech a échoué ({exc})")
+                _logger.info(f"Nouvel état de l'équipement {vals[2]} dans tec.tech:\n{dict2log(mynewpc[0])}")
+    else:
+        if idlot:  # création d'un nouvel équipement
+            _logger.info(f"L'équipement {vals[2]} n'a pas été trouvé: il va être créé...")
+            d = from_bolc_to_tectech(vals, idlot=idlot, idstock="", idmaterielreconditionneur=idmatrecond, idesn=idesn,
+                                     datestamp=datestamp)
+            _logger.info(f"Dictionnaire à envoyer à tec.tech\n{dict2log(d)}")
+            try:
+                # _logger.info("Création d'un équipement dans tec.tech SIMULÉ et présumé réussi...")
+                mynewpc = api.create_equipment(d)
+            except Exception as exc:
+                _logger.error(f"La création de l'équipement {vals[2]} dans tec.tech a échoué ({exc})")
+            else:
+                _logger.info(f"Nouvel équipement {vals[2]} créé dans tec.tech:\n{mynewpc[0]}")
         else:
-            _logger.info(f"Nouvel équipement {vals[2]}/{vals[14]} créé dans tec.tech:\n{mynewpc[0]}")
+            _logger.info(f"En l'absence de idLot, l'équipement {vals[2]} ne sera pas créé...")
 
     if mynewpc:
         # we trustfully use the existing naming scheme...
