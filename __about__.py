@@ -1,4 +1,4 @@
-__version__ = "5.1.1"
+__version__ = "5.2.0"
 __title__ = 'Audit de PC Linux pour Emmaüs Connect'
 
 __description__: str = """

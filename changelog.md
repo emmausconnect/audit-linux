@@ -25,22 +25,15 @@ bash audit.sh -h
 
 # Version actuelle
 
-## 5.1.1
+## 5.2.0
 
-- j'ai intégré la non-recherche sur `numeroSerie` (que j'avais oubliée dans la `5.1.0`!)
+- lors d'une tentative de création de matériel dans tec.tech, on rejette la demande s'il existe déjà dans tec.tech un matériel avec le même `numeroSerie`
 
-- les messages affichés dans la console sont plus lisibles, notamment pour les données échangées avec tec.tech
+- le programme vérifie très tôt si l'ESN est défini et sort dans le cas où il ne l'est pas
 
+- le README a été amélioré (d'après des propositions de Philippe R.)
 
-## 5.1.0
-
-- **changement important**: `numeroSerie` n'est plus utilisé comme clé de recherche dans tec.tech; donc l'`identifiantPC` passé en paramètre au programme d'audit sera recherché comme `idEsn` ou comme `idMaterielReconditionneur`; s'il n'est pas trouvé, la recherche s'arrête
-
-- si le PC en cours d'audit est trouvé dans tec.tech, et si son `numeroSerie` est non-vide et différent de celui "lu" par le programme dans le HW en cours d'audit alors les informations de tec.tech ne sont pas mises à jour
-
-- les disques de type MMC sont désormais reconnus et traités comme des HDD pour la catégorisation (en attendant que le document spécifiant la catégorisation soit mis à jour)
-
-- pour les PC qui ont plusieurs batteries (c'est le cas des 2-en-1, PC+tablette, comme le "Toshiba Z20t"), on rapporte l'état de la batterie principale
+- Rappel du **changement important** introduit dans la `5.1.0`: `numeroSerie` n'est plus utilisé comme clé de recherche dans tec.tech; donc l'`identifiantPC` passé en paramètre au programme d'audit sera recherché comme `idEsn` ou comme `idMaterielReconditionneur`; s'il n'est pas trouvé, la recherche s'arrête
 
 
 ## Si vous souhaitez rapporter une anomalie, faire des suggestions, …
@@ -59,6 +52,24 @@ Dans certains cas, il peut aussi être intéressant de joindre les fichiers suiv
 Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pas à un rédémarrage du PC.
 
 # Versions antérieures
+## 5.1.1
+
+- j'ai intégré la non-recherche sur `numeroSerie` (que j'avais oubliée dans la `5.1.0`!)
+
+- les messages affichés dans la console sont plus lisibles, notamment pour les données échangées avec tec.tech
+
+
+## 5.1.0
+
+- **changement important**: `numeroSerie` n'est plus utilisé comme clé de recherche dans tec.tech; donc l'`identifiantPC` passé en paramètre au programme d'audit sera recherché comme `idEsn` ou comme `idMaterielReconditionneur`; s'il n'est pas trouvé, la recherche s'arrête
+
+- si le PC en cours d'audit est trouvé dans tec.tech, et si son `numeroSerie` est non-vide et différent de celui "lu" par le programme dans le HW en cours d'audit alors les informations de tec.tech ne sont pas mises à jour
+
+- les disques de type MMC sont désormais reconnus et traités comme des HDD pour la catégorisation (en attendant que le document spécifiant la catégorisation soit mis à jour)
+
+- pour les PC qui ont plusieurs batteries (c'est le cas des 2-en-1, PC+tablette, comme le "Toshiba Z20t"), on rapporte l'état de la batterie principale
+
+
 ## 5.0.0
 
 Cette version introduit des **changements importants**:

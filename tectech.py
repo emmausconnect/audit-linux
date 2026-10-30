@@ -198,6 +198,9 @@ class TecTapiEmptyMandatoryValueError(TecTapiError):
 class TecTapiUsingIdOnEquipmentCreation(TecTapiError):
     pass
 
+class TecTapiWouldCreateDuplicateOnSN(TecTapiError):
+    pass
+
 class TecTapiCreationFailed(TecTapiError):
     pass
 
@@ -321,7 +324,7 @@ class TecTAPI:
 
 
     @classmethod
-    def lookup_equipment_by_numser(cls, numser: str) -> dict:
+    def lookup_equipment_by_numser(cls, numser: str, acceptdups: bool=False) -> dict:
         # look for a "materiel" in tec.tech, based only on idMaterielReconditionneur
         epmateriel = "materiel"
         limit = 2
@@ -347,7 +350,7 @@ class TecTAPI:
 
         nb = int(d['total'])
 
-        if nb > 1:
+        if nb > 1 and not acceptdups:
             errmsg = f"La recherche de {numser} par numeroSerie a trouvé plus d'une ({nb}) occurences"
             _logger.error(errmsg)
             dd = d['data']
@@ -422,7 +425,7 @@ class TecTAPI:
 
         # tenter une recherche sur numeroSerie
         try:
-            d = cls.lookup_equipment_by_numser(numeroserie)
+            d = cls.lookup_equipment_by_numser(numeroserie, acceptdups=False)
         except (TecTapiEquipmentNotFound, Exception) as exc:
             raise TecTapiEquipmentNotFound from exc
         else:
@@ -552,6 +555,15 @@ class TecTAPI:
         if not IdesnParser().parse(idesn):
             _logger.warning(f"L'idEsn {idesn} est mal formé")
             # raise TecTapiBadIdesnFormat(errmsg)
+
+        # check that we are not creating a duplicate on "numeroSerie"
+        if mat.get('numeroSerie'):
+            mypc = cls.lookup_equipment_by_numser(mat['numeroSerie'], acceptdups=True)
+            if mypc:
+                errmsg = (f"Au moins un matériel de même numeroSerie existe déjà: création annulée."
+                          f" Exemple: {mypc['id']} (idMatRec: {mypc['idMaterielReconditionneur']}"
+                          f", idEsn: {mypc['idEsn']})")
+                raise TecTapiWouldCreateDuplicateOnSN(errmsg)
 
         maturl = f"{TecTAPI.__selected_prefix}/materiel"
         headers = cls.__commonheaders | {'Authorization': f'Bearer {cls.__token}'}

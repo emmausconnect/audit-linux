@@ -1172,6 +1172,10 @@ if __name__ == '__main__':
                 args_.esn = _get_esn_from_file()
             else:
                 args_.esn = args_.esn.upper()
+            if args_.esn not in tectech_data.esn_to_idstock:
+                print(f"\nESN >{args_.esn}< inconnu. Il est obligatoire de choisir un ESN parmi: "
+                      f"{', '.join(sorted(list(tectech_data.esn_to_idstock.keys())))}")
+                sys.exit(1)
             EqId(args_.idpc.upper())
             # exitiftest
             Admin.esn = args_.esn

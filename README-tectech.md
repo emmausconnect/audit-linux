@@ -88,7 +88,16 @@ Notez que ces fichiers, du fait qu'ils sont placés dans `/tmp`, ne survivent pa
         "esn": " *une valeur parmi 'BX', 'CR', 'GR', 'LI', 'LV', 'LY', 'MA', 'MB', 'RO', 'SD', 'ST', 'VI'* "
     }
 ```
-en respectant scrupuleusement la syntaxe (notamment la casse, les guillemets et la virgule en fin des lignes `client_id` et `client_secret`)
+en respectant scrupuleusement la syntaxe (notamment la casse, les guillemets et la virgule en fin des lignes `client_id` et `client_secret`).
+
+Par exemple:
+```
+    {
+        "client_id": "UbBxxxxxxxxxxxxxxxxxxxxxxxxxxeVm",
+        "client_secret": "5uSxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxCnX",
+        "esn": "LY"
+    }
+```
 
 Les valeurs de `client_id` et de `client_secret` sont propres à chaque ESN et doivent être obtenues auprès de l'équipe tec.tech.
 
@@ -98,7 +107,7 @@ La valeur de `esn` sert à deux choses:
 
 - déterminer le répertoire de destination des données d'audit dans la base des audits (indépendante de tec.tech).
 
-La valeur de `esn` éventuellement passée en paramètre de la ligne de commande supplante celle qui se trouve dans `tectech-credentials.json`.
+Le cas échéant, la valeur de `esn` passée en paramètre de la ligne de commande supplante celle qui se trouve dans `tectech-credentials.json`.
 
 
 ## Utilisations ultérieures
@@ -118,10 +127,6 @@ bash audit.sh -i IdentifiantPC
 ##### Mini-audit: réaliser un audit sans identifier le PC et quitter
 ```commandline
 bash audit.sh --mini
-```
-##### Usage avancé: utilisation de la base tec.tech de test
-```commandline
-bash audit.sh -i IdentifiantPC --test
 ```
 
 Lors de l'audit, si l'équipement existe déjà dans tec.tech, l'outil le met à jour, sinon, il le crée, le tout avec les données collectées lors de l'audit.
@@ -163,7 +168,7 @@ Lors d'une création de matériel:
 
 - si `idEsn` est conforme à la syntaxe décrite ci-dessus, alors il prend aussi la valeur `IdentifiantPC`, sinon il reste vide
 
-De façon générale, à ma connaissance, la notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, à l'heure où j'écris, il existe dans tec.tech plusieurs dizaines de cas où des matériels différents (*ID* différents) ont les mêmes `idMaterielReconditionneur+numeroSerie`…
+À l'heure où j'écris (fin octobre 2026), la notion de doublon n'est pas définie formellement dans tec.tech au delà de l'unicité des différents *ID* (qui est requise par le SGBD sous-jacent). Par exemple, il existe aujourd'hui dans tec.tech 272 cas, impliquant 1208 matériels, où des matériels différents (*ID* différents) ont les mêmes `idMaterielReconditionneur+numeroSerie`…
 
 
 ## Notes importantes
